@@ -1,7 +1,11 @@
 package to.etc.sigeto;
 
+import org.eclipse.jdt.annotation.Nullable;
+
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Content {
@@ -23,8 +27,8 @@ public class Content {
 			sb.setLength(len);
 			sb.append("/").append(file.getName());
 			if(file.isFile()) {
-				String relative = sb.toString();
-				ContentItem ci = new ContentItem(file, getType(file), relative.substring(1));
+				String relative = sb.toString().substring(1);
+				ContentItem ci = new ContentItem(file, getType(file), relative);
 				if(ci.getType() == ContentType.Markdown) {
 					m_markDownItemCount++;
 				}
@@ -52,7 +56,16 @@ public class Content {
 		}
 	}
 
+	public List<ContentItem> getItemList() {
+		return new ArrayList<ContentItem>(m_itemMap.values());
+	}
+
 	public int getMarkDownItemCount() {
 		return m_markDownItemCount;
+	}
+
+	@Nullable
+	public ContentItem findItem(String fullPath) {
+		return m_itemMap.get(fullPath);
 	}
 }

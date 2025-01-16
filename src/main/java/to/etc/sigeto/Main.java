@@ -5,6 +5,9 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
 	@Option(name = "-i", aliases = {"-input"}, usage = "The directory containing the site's source files", required = true)
@@ -46,11 +49,32 @@ public class Main {
 				throw new MessageException("Output root does not exist and cannot be created at " + m_outputRoot);
 			}
 
-			Content content = Content.create(sourceRoot);
+			//-- Find the content root
+			File contentRoot = new File(m_inputRoot, "content");
+			if(!contentRoot.exists() || !contentRoot.isDirectory()) {
+				throw new MessageException("Content root does not exist: " + contentRoot);
+			}
+
+			Content content = Content.create(contentRoot);
 			if(content.getMarkDownItemCount() == 0) {
 				throw new MessageException("No markdown source files found at " + sourceRoot);
 			}
 
+			//-- Scan all markdown files, and check them
+			List<ContentItem> markdownList = content.getItemList().stream()
+				.filter(a -> a.getType() == ContentType.Markdown)
+				.collect(Collectors.toList());
+			MarkdownChecker mc = new MarkdownChecker(content);
+			List<Message> errorList = new ArrayList<>();
+			for(ContentItem item : markdownList) {
+				mc.scanContent(errorList, item);
+			}
+			if(!errorList.isEmpty()) {
+				for(Message message : errorList) {
+					System.err.println(message);
+				}
+				System.exit(9);
+			}
 
 
 

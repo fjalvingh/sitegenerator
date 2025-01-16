@@ -68,6 +68,20 @@
 			<artifactId>args4j</artifactId>
 			<version>2.33</version>
 		</dependency>
+
+		<dependency>
+			<groupId>com.vladsch.flexmark</groupId>
+			<artifactId>flexmark-all</artifactId>
+			<version>0.64.8</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.eclipse.jdt/org.eclipse.jdt.annotation -->
+		<dependency>
+			<groupId>org.eclipse.jdt</groupId>
+			<artifactId>org.eclipse.jdt.annotation</artifactId>
+			<version>1.1.100</version>
+		</dependency>
+
 	</dependencies>
 
 

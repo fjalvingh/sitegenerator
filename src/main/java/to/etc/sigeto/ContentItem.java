@@ -26,4 +26,15 @@ public class ContentItem {
 	public String getRelativePath() {
 		return m_relativePath;
 	}
+
+	public String getDirectoryPath() {
+		int pos = m_relativePath.lastIndexOf("/");
+		if(pos == -1)
+			return "";
+		return m_relativePath.substring(0, pos + 1);
+	}
+
+	@Override public String toString() {
+		return m_file + " [" + m_type + "]";
+	}
 }
