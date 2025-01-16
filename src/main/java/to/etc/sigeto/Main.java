@@ -5,6 +5,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -76,6 +77,12 @@ public class Main {
 				System.exit(9);
 			}
 
+			//-- Now render
+			for(ContentItem item : markdownList) {
+				renderItem(outputRoot, mc, item);
+			}
+
+
 
 
 		} catch(MessageException x) {
@@ -84,6 +91,31 @@ public class Main {
 		} catch(Exception x) {
 			x.printStackTrace();
 			System.exit(10);
+		}
+	}
+
+	private void renderItem(File outputRoot, MarkdownChecker mc, ContentItem item) throws Exception {
+		if(item.getType() == ContentType.Markdown) {
+			String render = mc.renderContent(item);
+			String relativePath = item.getRelativePath();
+			int pos = relativePath.lastIndexOf(".");
+			if(pos == -1)
+				throw new IllegalStateException("?? No .md extension");
+			String newPath = relativePath.substring(0, pos) + ".html";
+			File out = new File(outputRoot, newPath);
+			File parentFile = out.getParentFile();
+			if(null != parentFile) {
+				parentFile.mkdirs();
+			}
+			Util.writeFileFromString(out, render, StandardCharsets.UTF_8);
+		} else {
+			String relativePath = item.getRelativePath();
+			File out = new File(outputRoot, relativePath);
+			File parentFile = out.getParentFile();
+			if(null != parentFile) {
+				parentFile.mkdirs();
+			}
+			Util.copyFile(out, item.getFile());
 		}
 	}
 

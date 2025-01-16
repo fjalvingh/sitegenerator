@@ -4,6 +4,7 @@ import com.vladsch.flexmark.ast.Link;
 import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
 import com.vladsch.flexmark.ext.typographic.TypographicExtension;
+import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.Node;
@@ -20,6 +21,8 @@ public class MarkdownChecker {
 
 	private final Content m_content;
 
+	private final @NotNull HtmlRenderer m_renderer;
+
 	private ContentItem m_currentItem;
 
 	private List<Message> m_errorList;
@@ -34,8 +37,23 @@ public class MarkdownChecker {
 
 		));
 		m_parser = Parser.builder(options).build();
+		m_renderer = HtmlRenderer.builder(options).build();
 	}
 
+	/**
+	 * Render the actual content.
+	 */
+	public String renderContent(ContentItem item) throws Exception {
+		if(item.getType() != ContentType.Markdown)
+			throw new IllegalStateException(item + " is not markdown");
+		String text = Util.readFileAsString(item.getFile());
+		Document doc = m_parser.parse(text);
+		return m_renderer.render(doc);
+	}
+
+	/**
+	 * Pre-scan the content and report any errors.
+	 */
 	public void scanContent(List<Message> errorList, ContentItem item) throws Exception {
 		m_errorList = errorList;
 		m_currentItem = item;
@@ -52,10 +70,7 @@ public class MarkdownChecker {
 	private void checkNode(Node node) {
 		if(node instanceof Link) {
 			checkLink((Link) node);
-
-
 		}
-
 	}
 
 	private void checkLink(Link link) {

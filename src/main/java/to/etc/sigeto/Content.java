@@ -14,6 +14,9 @@ public class Content {
 
 	private int m_markDownItemCount;
 
+	/** For MarkDown items this is the rendering of the file, after all checks. */
+	private String m_renderedContent;
+
 	public static Content create(File root) {
 		StringBuilder sb = new StringBuilder();
 		Content content = new Content();
@@ -67,5 +70,13 @@ public class Content {
 	@Nullable
 	public ContentItem findItem(String fullPath) {
 		return m_itemMap.get(fullPath);
+	}
+
+	public String getRenderedContent() {
+		return m_renderedContent;
+	}
+
+	public void setRenderedContent(String renderedContent) {
+		m_renderedContent = renderedContent;
 	}
 }
