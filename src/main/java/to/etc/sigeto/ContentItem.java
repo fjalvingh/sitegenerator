@@ -9,6 +9,8 @@ public class ContentItem {
 
 	private final String m_relativePath;
 
+	private String m_pageTitle;
+
 	public ContentItem(File file, ContentType type, String relativePath) {
 		m_file = file;
 		m_type = type;
@@ -32,6 +34,14 @@ public class ContentItem {
 		if(pos == -1)
 			return "";
 		return m_relativePath.substring(0, pos + 1);
+	}
+
+	public String getPageTitle() {
+		return m_pageTitle;
+	}
+
+	public void setPageTitle(String pageTitle) {
+		m_pageTitle = pageTitle;
 	}
 
 	@Override public String toString() {

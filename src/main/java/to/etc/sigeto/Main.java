@@ -1,13 +1,21 @@
 package to.etc.sigeto;
 
+import gg.jte.CodeResolver;
+import gg.jte.TemplateEngine;
+import gg.jte.TemplateOutput;
+import gg.jte.output.StringOutput;
+import gg.jte.resolve.DirectoryCodeResolver;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -49,6 +57,10 @@ public class Main {
 			if(!outputRoot.exists()) {
 				throw new MessageException("Output root does not exist and cannot be created at " + m_outputRoot);
 			}
+			File templateRoot = new File(m_inputRoot, "templates");
+			if(!templateRoot.exists() || !templateRoot.isDirectory()) {
+				throw new MessageException("Template root does not exist: " + templateRoot);
+			}
 
 			//-- Find the content root
 			File contentRoot = new File(m_inputRoot, "content");
@@ -77,9 +89,12 @@ public class Main {
 				System.exit(9);
 			}
 
+			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
+			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
+
 			//-- Now render
 			for(ContentItem item : markdownList) {
-				renderItem(outputRoot, mc, item);
+				renderItem(outputRoot, templateEngine, mc, item);
 			}
 
 
@@ -94,20 +109,9 @@ public class Main {
 		}
 	}
 
-	private void renderItem(File outputRoot, MarkdownChecker mc, ContentItem item) throws Exception {
+	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item) throws Exception {
 		if(item.getType() == ContentType.Markdown) {
-			String render = mc.renderContent(item);
-			String relativePath = item.getRelativePath();
-			int pos = relativePath.lastIndexOf(".");
-			if(pos == -1)
-				throw new IllegalStateException("?? No .md extension");
-			String newPath = relativePath.substring(0, pos) + ".html";
-			File out = new File(outputRoot, newPath);
-			File parentFile = out.getParentFile();
-			if(null != parentFile) {
-				parentFile.mkdirs();
-			}
-			Util.writeFileFromString(out, render, StandardCharsets.UTF_8);
+			renderMarkdown(outputRoot, templateEngine, mc, item);
 		} else {
 			String relativePath = item.getRelativePath();
 			File out = new File(outputRoot, relativePath);
@@ -119,14 +123,26 @@ public class Main {
 		}
 	}
 
-	/**
-	 * Scan all content files in the content root, and define relative paths to all of them.
-	 */
-	private void scanContent(String inputRoot) {
+	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item) throws Exception {
+		String render = mc.renderContent(item);
+		String relativePath = item.getRelativePath();
+		int pos = relativePath.lastIndexOf(".");
+		if(pos == -1)
+			throw new IllegalStateException("?? No .md extension");
+		String newPath = relativePath.substring(0, pos) + ".html";
+		File out = new File(outputRoot, newPath);
+		File parentFile = out.getParentFile();
+		if(null != parentFile) {
+			parentFile.mkdirs();
+		}
 
+		TemplateOutput output = new StringOutput(65536);
+		Map<String, Object> model = new HashMap<>();
+		PageModel pm = new PageModel(render, item);
+		model.put("page", pm);
+		templateEngine.render("base.jte", model, output);
 
-
-
+		Util.writeFileFromString(out, output.toString(), StandardCharsets.UTF_8);
 	}
 
 	static private void log(String s) {

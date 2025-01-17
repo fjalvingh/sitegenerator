@@ -1,5 +1,6 @@
 package to.etc.sigeto;
 
+import com.vladsch.flexmark.ast.Heading;
 import com.vladsch.flexmark.ast.Link;
 import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
@@ -70,6 +71,10 @@ public class MarkdownChecker {
 	private void checkNode(Node node) {
 		if(node instanceof Link) {
 			checkLink((Link) node);
+		} else if(node instanceof Heading) {
+			Heading heading = (Heading) node;
+			if(m_currentItem.getPageTitle() == null)
+				m_currentItem.setPageTitle(heading.getText().unescape());
 		}
 	}
 

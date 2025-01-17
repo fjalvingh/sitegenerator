@@ -45,8 +45,8 @@
 		<maven-surefire.version>2.22.2</maven-surefire.version>
 
 		<!-- JDK properties -->
-		<source.jdk.version>11</source.jdk.version>
-		<target.jdk.version>11</target.jdk.version>
+		<source.jdk.version>17</source.jdk.version>
+		<target.jdk.version>17</target.jdk.version>
 		<ecj.version>3.20.0</ecj.version>
 
 		<!-- Plugin versions -->
@@ -73,6 +73,13 @@
 			<groupId>com.vladsch.flexmark</groupId>
 			<artifactId>flexmark-all</artifactId>
 			<version>0.64.8</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/gg.jte/jte -->
+		<dependency>
+			<groupId>gg.jte</groupId>
+			<artifactId>jte</artifactId>
+			<version>3.1.16</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.eclipse.jdt/org.eclipse.jdt.annotation -->
