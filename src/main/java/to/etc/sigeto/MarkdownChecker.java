@@ -6,6 +6,7 @@ import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.ext.emoji.EmojiImageType;
 import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
+import com.vladsch.flexmark.ext.toc.TocExtension;
 import com.vladsch.flexmark.ext.typographic.TypographicExtension;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
@@ -46,7 +47,8 @@ public class MarkdownChecker {
 			EmojiExtension.create(),
 			TypographicExtension.create(),
 			MdLinkToGeneratedLinkExtension.create(),
-			MdFixImgExtension.create(this)
+			MdFixImgExtension.create(this),
+			TocExtension.create()
 		));
 		m_parser = Parser.builder(options).build();
 		m_renderer = HtmlRenderer.builder(options).build();
