@@ -38,12 +38,6 @@ final public class MdImageRewriter implements NodeRenderer {
 
 		@Override
 		public Set<Class<?>> getDelegates() {
-			///Set<Class<?>>();
-			// add node renderer factory classes to which this renderer will delegate some of its rendering
-			// core node renderer is assumed to have all depend it so there is no need to add it
-			//set.add(WikiLinkNodeRenderer.Factory.class);
-			//return set;
-
 			// return null if renderer does not delegate or delegates only to core node renderer
 			return null;
 		}
@@ -79,7 +73,6 @@ final public class MdImageRewriter implements NodeRenderer {
 								.tag("img");
 							html.closeTag("img");
 							html.closeTag("a");
-							return;
 						} else {
 							//-- Write the original, but add the size for better rendering
 							html
@@ -89,24 +82,13 @@ final public class MdImageRewriter implements NodeRenderer {
 								.attr("height", Integer.toString(srcBi.getHeight()))
 								.tag("img");
 							html.closeTag("img");
-							return;
 						}
+						return;
 					}
 				}
 
 				//-- Delegate to default
 				context.delegateRender();
-
-
-				// test the node to see if it needs overriding
-				html.tag("img");
-				html.closeTag("img");
-				//if(node.getText().equals("bar")) {
-				//	html.text("(eliminated)");
-				//} else {
-				//	// otherwise pass it for default rendering
-				//	context.delegateRender();
-				//}
 			} catch(Exception e) {
 				throw WrappedException.wrap(e);
 			}

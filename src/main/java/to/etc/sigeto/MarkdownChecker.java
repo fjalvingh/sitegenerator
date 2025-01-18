@@ -2,6 +2,8 @@ package to.etc.sigeto;
 
 import com.vladsch.flexmark.ast.Heading;
 import com.vladsch.flexmark.ast.Link;
+import com.vladsch.flexmark.ext.emoji.EmojiExtension;
+import com.vladsch.flexmark.ext.emoji.EmojiImageType;
 import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
 import com.vladsch.flexmark.ext.typographic.TypographicExtension;
@@ -37,13 +39,14 @@ public class MarkdownChecker {
 	public MarkdownChecker(Content content) {
 		m_content = content;
 		MutableDataSet options = new MutableDataSet();
+		options.set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_ONLY);
 		options.set(Parser.EXTENSIONS, Arrays.asList(
 			TablesExtension.create(),
 			StrikethroughExtension.create(),
+			EmojiExtension.create(),
 			TypographicExtension.create(),
 			MdLinkToGeneratedLinkExtension.create(),
 			MdFixImgExtension.create(this)
-
 		));
 		m_parser = Parser.builder(options).build();
 		m_renderer = HtmlRenderer.builder(options).build();
