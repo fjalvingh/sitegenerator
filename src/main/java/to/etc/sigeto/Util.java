@@ -94,4 +94,32 @@ public class Util {
 
 	}
 
+	public static String getExtension(String name) {
+		int pos = name.lastIndexOf('/');
+		if(pos != -1) {
+			name = name.substring(pos + 1);
+		} else {
+			pos = name.lastIndexOf('\\');
+			if(pos != -1) {
+				name = name.substring(pos + 1);
+			}
+		}
+
+		pos = name.lastIndexOf(".");
+		if(pos == -1) {
+			return "";
+		}
+		return name.substring(pos + 1);
+	}
+
+	public static String getFilenameSansExtension(String name) {
+		int slash = name.lastIndexOf('/');
+		if(slash == -1) {
+			slash = name.lastIndexOf('\\');
+		}
+		int pos = name.lastIndexOf(".");
+		if(pos < slash)
+			return name;
+		return name.substring(0, pos);
+	}
 }

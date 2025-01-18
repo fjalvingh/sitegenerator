@@ -10,7 +10,9 @@ import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
+import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.jetbrains.annotations.NotNull;
+import to.etc.sigeto.MdToGeneratedLinkResolver.MdLinkToGeneratedLinkExtension;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -34,7 +36,8 @@ public class MarkdownChecker {
 		options.set(Parser.EXTENSIONS, Arrays.asList(
 			TablesExtension.create(),
 			StrikethroughExtension.create(),
-			TypographicExtension.create()
+			TypographicExtension.create(),
+			MdLinkToGeneratedLinkExtension.create()
 
 		));
 		m_parser = Parser.builder(options).build();
@@ -49,7 +52,19 @@ public class MarkdownChecker {
 			throw new IllegalStateException(item + " is not markdown");
 		String text = Util.readFileAsString(item.getFile());
 		Document doc = m_parser.parse(text);
+
+		walkNode(doc, node -> {
+			rewriteNode(node);
+		});
+
+
 		return m_renderer.render(doc);
+	}
+
+	private void rewriteNode(Node node) {
+		if(node instanceof Link) {
+			checkLink((Link) node);
+		}
 	}
 
 	/**
@@ -78,6 +93,10 @@ public class MarkdownChecker {
 		}
 	}
 
+	/**
+	 * Check that the thing linked to does exist (if internal), and
+	 * replace it with a html link to the generated page.
+	 */
 	private void checkLink(Link link) {
 		String url = link.getUrl().unescape();
 		if(url.indexOf(':') != -1)									// http(s): url?
@@ -99,6 +118,15 @@ public class MarkdownChecker {
 		if(null == item) {
 			m_errorList.add(new Message(m_currentItem, link.getLineNumber(), MsgType.Error, "Link to unknown document: " + url + " " + fullPath));
 			return;
+		}
+
+		//-- It worked. Is this a Markdown link?
+		if(item.getType() == ContentType.Markdown) {
+			//-- Change the URL to the generated target
+			String targetURL = Util.getFilenameSansExtension(url) + ".html";
+			link.setUrl(BasedSequence.of(targetURL));
+			link.setPageRef(BasedSequence.of(targetURL));
+
 		}
 	}
 

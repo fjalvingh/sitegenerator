@@ -93,13 +93,9 @@ public class Main {
 			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
 
 			//-- Now render
-			for(ContentItem item : markdownList) {
+			for(ContentItem item : content.getItemList()) {
 				renderItem(outputRoot, templateEngine, mc, item);
 			}
-
-
-
-
 		} catch(MessageException x) {
 			System.err.println("Error: " + x.getMessage());
 			System.exit(10);
@@ -140,7 +136,7 @@ public class Main {
 		Map<String, Object> model = new HashMap<>();
 		PageModel pm = new PageModel(render, item);
 		model.put("page", pm);
-		templateEngine.render("base.jte", model, output);
+		templateEngine.render("base.jte", pm, output);
 
 		Util.writeFileFromString(out, output.toString(), StandardCharsets.UTF_8);
 	}
