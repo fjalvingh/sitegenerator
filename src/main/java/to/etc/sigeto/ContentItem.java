@@ -45,6 +45,6 @@ public class ContentItem {
 	}
 
 	@Override public String toString() {
-		return m_file + " [" + m_type + "]";
+		return m_relativePath + " [" + m_type + "]";
 	}
 }

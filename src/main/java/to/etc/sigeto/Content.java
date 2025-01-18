@@ -49,14 +49,28 @@ public class Content {
 			return ContentType.Resource;
 		}
 		String ext = name.substring(pos + 1).toLowerCase();
-		switch(ext) {
+		switch(ext){
 			default:
 				return ContentType.Resource;
+
+			case "png":
+			case "gif":
+			case "jpg":
+			case "jpeg":
+				return ContentType.Image;
 
 			case "md":
 			case "mdown":
 				return ContentType.Markdown;
 		}
+	}
+
+	static public boolean isRelativePath(String url) {
+		if(url.indexOf(':') != -1)                // http(s): url?
+			return false;                        // We cannot check those currently
+		if(url.startsWith("#"))
+			return false;
+		return true;
 	}
 
 	public List<ContentItem> getItemList() {

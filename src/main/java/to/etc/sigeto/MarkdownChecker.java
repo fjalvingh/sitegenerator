@@ -10,10 +10,12 @@ import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
-import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import to.etc.sigeto.MdImageRewriter.MdFixImgExtension;
 import to.etc.sigeto.MdToGeneratedLinkResolver.MdLinkToGeneratedLinkExtension;
 
+import java.awt.*;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +32,8 @@ public class MarkdownChecker {
 
 	private List<Message> m_errorList;
 
+	private Dimension m_maxImageSize = new Dimension(900, 900);
+
 	public MarkdownChecker(Content content) {
 		m_content = content;
 		MutableDataSet options = new MutableDataSet();
@@ -37,7 +41,8 @@ public class MarkdownChecker {
 			TablesExtension.create(),
 			StrikethroughExtension.create(),
 			TypographicExtension.create(),
-			MdLinkToGeneratedLinkExtension.create()
+			MdLinkToGeneratedLinkExtension.create(),
+			MdFixImgExtension.create(this)
 
 		));
 		m_parser = Parser.builder(options).build();
@@ -53,19 +58,17 @@ public class MarkdownChecker {
 		String text = Util.readFileAsString(item.getFile());
 		Document doc = m_parser.parse(text);
 
-		walkNode(doc, node -> {
-			rewriteNode(node);
-		});
-
-
+		//walkNode(doc, node -> {
+		//	rewriteNode(node);
+		//});
 		return m_renderer.render(doc);
 	}
 
-	private void rewriteNode(Node node) {
-		if(node instanceof Link) {
-			checkLink((Link) node);
-		}
-	}
+	//private void rewriteNode(Node node) {
+	//	if(node instanceof Link) {
+	//		checkLink((Link) node);
+	//	}
+	//}
 
 	/**
 	 * Pre-scan the content and report any errors.
@@ -99,10 +102,45 @@ public class MarkdownChecker {
 	 */
 	private void checkLink(Link link) {
 		String url = link.getUrl().unescape();
-		if(url.indexOf(':') != -1)									// http(s): url?
-			return;													// We cannot check those currently
-		if(url.startsWith("#"))
+		if(!Content.isRelativePath(url))
 			return;
+
+		ContentItem item = findItemByURL(url);
+
+		//if(url.indexOf(':') != -1)									// http(s): url?
+		//	return;													// We cannot check those currently
+		//if(url.startsWith("#"))
+		//	return;
+		//
+		//String fullPath;
+		//if(url.startsWith("/")) {
+		//	fullPath = url.substring(1);
+		//} else {
+		//	//-- Relative wrt the parent
+		//	Path path = Path.of(m_currentItem.getDirectoryPath());
+		//	Path resolvedPath = path.resolve(url).normalize();
+		//	fullPath = resolvedPath.toString();
+		//}
+		//
+		//ContentItem item = m_content.findItem(fullPath);
+		if(null == item) {
+			m_errorList.add(new Message(m_currentItem, link.getLineNumber(), MsgType.Error, "Link to unknown document: " + url));
+			return;
+		}
+
+		////-- It worked. Is this a Markdown link?
+		//if(item.getType() == ContentType.Markdown) {
+		//	//-- Change the URL to the generated target
+		//	String targetURL = Util.getFilenameSansExtension(url) + ".html";
+		//	link.setUrl(BasedSequence.of(targetURL));
+		//	link.setPageRef(BasedSequence.of(targetURL));
+		//}
+	}
+
+	@Nullable
+	public ContentItem findItemByURL(String url) {
+		if(!Content.isRelativePath(url))
+			return null;
 
 		String fullPath;
 		if(url.startsWith("/")) {
@@ -115,19 +153,7 @@ public class MarkdownChecker {
 		}
 
 		ContentItem item = m_content.findItem(fullPath);
-		if(null == item) {
-			m_errorList.add(new Message(m_currentItem, link.getLineNumber(), MsgType.Error, "Link to unknown document: " + url + " " + fullPath));
-			return;
-		}
-
-		//-- It worked. Is this a Markdown link?
-		if(item.getType() == ContentType.Markdown) {
-			//-- Change the URL to the generated target
-			String targetURL = Util.getFilenameSansExtension(url) + ".html";
-			link.setUrl(BasedSequence.of(targetURL));
-			link.setPageRef(BasedSequence.of(targetURL));
-
-		}
+		return item;
 	}
 
 	static void walkNode(Node node, Consumer<Node> nodeConsumer) {
@@ -137,5 +163,9 @@ public class MarkdownChecker {
 			nodeConsumer.accept(child);
 			walkNode(child, nodeConsumer);
 		}
+	}
+
+	public Dimension getMaxImageSize() {
+		return m_maxImageSize;
 	}
 }
