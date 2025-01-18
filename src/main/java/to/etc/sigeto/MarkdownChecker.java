@@ -60,6 +60,7 @@ public class MarkdownChecker {
 	public String renderContent(ContentItem item) throws Exception {
 		if(item.getType() != ContentType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
+		m_currentItem = item;
 		String text = Util.readFileAsString(item.getFile());
 		Document doc = m_parser.parse(text);
 
@@ -159,6 +160,22 @@ public class MarkdownChecker {
 
 		ContentItem item = m_content.findItem(fullPath);
 		return item;
+	}
+
+	/**
+	 * Create a URL relative to the root, using ../.. paths.
+	 */
+	public String siteURL(String url) {
+		String rp = m_currentItem.getRelativePath();
+		StringBuilder sb = new StringBuilder();
+		for(int i = 1; i < rp.length(); i++) {
+			char c = rp.charAt(i);
+			if(c == '/') {
+				sb.append("../");
+			}
+		}
+		sb.append(url);
+		return sb.toString();
 	}
 
 	static void walkNode(Node node, Consumer<Node> nodeConsumer) {

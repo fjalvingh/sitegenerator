@@ -96,12 +96,33 @@ public class Main {
 			for(ContentItem item : content.getItemList()) {
 				renderItem(outputRoot, templateEngine, mc, item);
 			}
+
+			//-- Copy theme data
+			copyTemplateAssets(outputRoot, templateRoot);
+
+
 		} catch(MessageException x) {
 			System.err.println("Error: " + x.getMessage());
 			System.exit(10);
 		} catch(Exception x) {
 			x.printStackTrace();
 			System.exit(10);
+		}
+	}
+
+	private void copyTemplateAssets(File outputRoot, File templateRoot) throws Exception {
+		File[] files = templateRoot.listFiles();
+		if(null == files)
+			return;
+		for(File file : files) {
+			if(file.isDirectory()) {
+				copyTemplateAssets(new File(outputRoot, file.getName()), file);
+			} else {
+				if(!file.getName().toLowerCase().endsWith(".jte")) {
+					outputRoot.mkdirs();
+					Util.copyFile(new File(outputRoot, file.getName()), file);
+				}
+			}
 		}
 	}
 
@@ -134,7 +155,7 @@ public class Main {
 
 		TemplateOutput output = new StringOutput(65536);
 		Map<String, Object> model = new HashMap<>();
-		PageModel pm = new PageModel(render, item);
+		PageModel pm = new PageModel(render, mc, item);
 		model.put("page", pm);
 		templateEngine.render("base.jte", pm, output);
 
