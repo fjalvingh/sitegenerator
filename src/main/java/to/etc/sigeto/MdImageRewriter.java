@@ -81,8 +81,14 @@ final public class MdImageRewriter implements NodeRenderer {
 							html.closeTag("a");
 							return;
 						} else {
-							//-- Render the image as-is
-							context.delegateRender();
+							//-- Write the original, but add the size for better rendering
+							html
+								.withAttr()
+								.attr("src", url)
+								.attr("width", Integer.toString(srcBi.getWidth()))
+								.attr("height", Integer.toString(srcBi.getHeight()))
+								.tag("img");
+							html.closeTag("img");
 							return;
 						}
 					}
