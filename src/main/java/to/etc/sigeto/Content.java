@@ -20,48 +20,60 @@ public class Content {
 	public static Content create(File root) {
 		StringBuilder sb = new StringBuilder();
 		Content content = new Content();
-		content.scanContent(content, sb, root);
+
+		//-- Scan pages
+		File pageRoot = new File(root, "pages");
+		if(pageRoot.exists() && pageRoot.isDirectory()) {
+			content.scanContent(sb, pageRoot, ContentType.Page);
+		}
+
+		//-- Scan blog entries
+		File blogRoot = new File(root, "blog");
+		if(blogRoot.exists() && blogRoot.isDirectory()) {
+			sb.setLength(0);
+			content.scanContent(sb, blogRoot, ContentType.Blog);
+		}
 		return content;
 	}
 
-	private void scanContent(Content content, StringBuilder sb, File root) {
+	private void scanContent(StringBuilder sb, File root, ContentType type) {
 		int len = sb.length();
 		for(File file : root.listFiles()) {
 			sb.setLength(len);
 			sb.append("/").append(file.getName());
 			if(file.isFile()) {
 				String relative = sb.toString().substring(1);
-				ContentItem ci = new ContentItem(file, getType(file), relative);
-				if(ci.getType() == ContentType.Markdown) {
+				ContentItem ci = new ContentItem(file, type, getType(file), relative);
+				if(ci.getFileType() == ContentFileType.Markdown) {
 					m_markDownItemCount++;
 				}
 				m_itemMap.put(relative, ci);
 			} else if(file.isDirectory()) {
-				scanContent(content, sb, file);
+				scanContent(sb, file, type);
 			}
 		}
 	}
 
-	private ContentType getType(File file) {
+	private ContentFileType getType(File file) {
 		String name = file.getName();
 		int pos = name.lastIndexOf(".");
 		if(pos == -1) {
-			return ContentType.Resource;
+			return ContentFileType.Resource;
 		}
 		String ext = name.substring(pos + 1).toLowerCase();
 		switch(ext){
 			default:
-				return ContentType.Resource;
+				return ContentFileType.Resource;
 
 			case "png":
 			case "gif":
 			case "jpg":
 			case "jpeg":
-				return ContentType.Image;
+				return ContentFileType.Image;
 
 			case "md":
 			case "mdown":
-				return ContentType.Markdown;
+				return ContentFileType.Markdown;
 		}
 	}
 

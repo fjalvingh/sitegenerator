@@ -7,13 +7,16 @@ public class ContentItem {
 
 	private final ContentType m_type;
 
+	private final ContentFileType m_fileType;
+
 	private final String m_relativePath;
 
 	private String m_pageTitle;
 
-	public ContentItem(File file, ContentType type, String relativePath) {
+	public ContentItem(File file, ContentType type, ContentFileType fileType, String relativePath) {
 		m_file = file;
 		m_type = type;
+		m_fileType = fileType;
 		m_relativePath = relativePath;
 	}
 
@@ -23,6 +26,10 @@ public class ContentItem {
 
 	public ContentType getType() {
 		return m_type;
+	}
+
+	public ContentFileType getFileType() {
+		return m_fileType;
 	}
 
 	public String getRelativePath() {
@@ -45,6 +52,6 @@ public class ContentItem {
 	}
 
 	@Override public String toString() {
-		return m_relativePath + " [" + m_type + "]";
+		return m_relativePath + " [" + m_fileType + "]";
 	}
 }

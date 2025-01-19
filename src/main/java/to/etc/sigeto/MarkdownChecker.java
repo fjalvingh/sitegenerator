@@ -58,7 +58,7 @@ public class MarkdownChecker {
 	 * Render the actual content.
 	 */
 	public String renderContent(ContentItem item) throws Exception {
-		if(item.getType() != ContentType.Markdown)
+		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		m_currentItem = item;
 		String text = Util.readFileAsString(item.getFile());
@@ -83,7 +83,7 @@ public class MarkdownChecker {
 		m_errorList = errorList;
 		m_currentItem = item;
 		System.out.println("Pre-parsing " + item.getRelativePath());
-		if(item.getType() != ContentType.Markdown)
+		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		String text = Util.readFileAsString(item.getFile());
 		Document doc = m_parser.parse(text);

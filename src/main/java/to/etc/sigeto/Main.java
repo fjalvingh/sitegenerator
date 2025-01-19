@@ -75,7 +75,7 @@ public class Main {
 
 			//-- Scan all markdown files, and check them
 			List<ContentItem> markdownList = content.getItemList().stream()
-				.filter(a -> a.getType() == ContentType.Markdown)
+				.filter(a -> a.getFileType() == ContentFileType.Markdown)
 				.collect(Collectors.toList());
 			MarkdownChecker mc = new MarkdownChecker(content);
 			List<Message> errorList = new ArrayList<>();
@@ -127,7 +127,7 @@ public class Main {
 	}
 
 	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item) throws Exception {
-		if(item.getType() == ContentType.Markdown) {
+		if(item.getFileType() == ContentFileType.Markdown) {
 			renderMarkdown(outputRoot, templateEngine, mc, item);
 		} else {
 			String relativePath = item.getRelativePath();
