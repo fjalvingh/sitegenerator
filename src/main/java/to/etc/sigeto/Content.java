@@ -1,5 +1,6 @@
 package to.etc.sigeto;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 
 import java.io.File;
@@ -21,7 +22,6 @@ public class Content {
 
 	private Set<ContentItem> m_usedResourceList = new HashSet<>();
 
-	@Nullable
 	private ContentLevel m_pageRootLevel;
 
 	@Nullable
@@ -31,21 +31,10 @@ public class Content {
 		StringBuilder sb = new StringBuilder();
 		Content content = new Content();
 
-		//-- Scan pages
-		File pageRoot = new File(root, "pages");
-		File blogRoot = new File(root, "blog");
-
-		if(pageRoot.exists() && pageRoot.isDirectory()) {
-			sb.append(pageRoot.getName());
-			content.m_pageRootLevel = content.scanContent(sb, null, pageRoot, ContentType.Page);
-		}
-
-		//-- Scan blog entries
-		if(blogRoot.exists() && blogRoot.isDirectory()) {
-			sb.setLength(0);
-			sb.append(blogRoot.getName());
-			content.m_blogRootLevel = content.scanContent(sb, null, blogRoot, ContentType.Blog);
-		}
+		ContentLevel rootLevel = content.scanContent(sb, null, root, ContentType.Page);
+		if(null == rootLevel)
+			throw new MessageException("No content inside the content directory");
+		content.m_pageRootLevel = rootLevel;
 		return content;
 	}
 
@@ -53,6 +42,12 @@ public class Content {
 	private ContentLevel scanContent(StringBuilder sb, @Nullable ContentLevel parentLevel, File root, ContentType type) {
 		int len = sb.length();
 		ContentLevel level = new ContentLevel(root, sb.toString(), type, parentLevel);
+
+		if(root.getName().equalsIgnoreCase("blogs")) {
+			type = ContentType.Blog;
+			if(m_blogRootLevel == null)
+				m_blogRootLevel = level;
+		}
 
 		File[] files = root.listFiles();
 		if(null == files || files.length == 0) {
@@ -87,16 +82,18 @@ public class Content {
 		}
 
 		//-- For every sublevel found here: is there an index page for it here too?
-		for(ContentLevel sub : level.getSubLevelList()) {
-			if(sub.hasMarkdown()) {
-				ContentItem item = level.findItemByName(sub.getName() + ".md");
-				if(null == item) {
-					item = level.findItemByName(sub.getName() + ".mdown");
-				}
-				if(null != item) {
-					level.setRootItem(item);
-				} else {
-					System.out.println(sub.getRelativePath() + ": no index page found for this sublevel");
+		if(level.getParentLevel() != null) {
+			for(ContentLevel sub : level.getSubLevelList()) {
+				if(sub.hasMarkdown()) {
+					ContentItem item = level.findItemByName(sub.getName() + ".md");
+					if(null == item) {
+						item = level.findItemByName(sub.getName() + ".mdown");
+					}
+					if(null != item) {
+						level.setRootItem(item);
+					} else {
+						System.out.println(sub.getRelativePath() + ": no index page found for this sublevel");
+					}
 				}
 			}
 		}
@@ -164,7 +161,8 @@ public class Content {
 		return m_usedResourceList;
 	}
 
-	@Nullable public ContentLevel getPageRootLevel() {
+	@NonNull
+	public ContentLevel getPageRootLevel() {
 		return m_pageRootLevel;
 	}
 }

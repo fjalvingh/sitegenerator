@@ -62,11 +62,11 @@ public class Main {
 				throw new MessageException("Template root does not exist: " + templateRoot);
 			}
 
-			////-- Find the content root
-			//File contentRoot = new File(m_inputRoot, "content");
-			//if(!contentRoot.exists() || !contentRoot.isDirectory()) {
-			//	throw new MessageException("Content root does not exist: " + contentRoot);
-			//}
+			//-- Find the content root
+			File contentRoot = new File(m_inputRoot, "content");
+			if(!contentRoot.exists() || !contentRoot.isDirectory()) {
+				throw new MessageException("Content root does not exist: " + contentRoot);
+			}
 
 			Content content = Content.create(sourceRoot);
 			if(content.getMarkDownItemCount() == 0) {
@@ -99,6 +99,7 @@ public class Main {
 			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
 
 			//-- Now render
+			Util.dirEmpty(outputRoot);
 			for(ContentItem item : content.getItemList()) {
 				renderItem(outputRoot, templateEngine, mc, item);
 			}
