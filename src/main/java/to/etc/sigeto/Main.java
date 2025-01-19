@@ -90,7 +90,7 @@ public class Main {
 			}
 
 			if(true) {
-				Rewriter.rewrite(content, mc, new File("/tmp/reformatted"));
+				Rewriter.rewrite(content, mc, new File("/home/jal/git/testsite/pages"));
 				return;
 			}
 

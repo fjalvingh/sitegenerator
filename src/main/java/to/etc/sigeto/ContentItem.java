@@ -3,6 +3,8 @@ package to.etc.sigeto;
 import org.eclipse.jdt.annotation.NonNull;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ContentItem {
 	private final File m_file;
@@ -18,6 +20,8 @@ public class ContentItem {
 	@NonNull
 	private ContentLevel m_level;
 
+	private List<ContentItem> m_usedItemList = new ArrayList<>();
+
 	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
 		m_level = level;
 		m_file = file;
@@ -29,6 +33,10 @@ public class ContentItem {
 	@NonNull
 	public ContentLevel getLevel() {
 		return m_level;
+	}
+
+	public String getName() {
+		return m_file.getName();
 	}
 
 	public void setLevel(@NonNull ContentLevel level) {
@@ -64,6 +72,14 @@ public class ContentItem {
 
 	public void setPageTitle(String pageTitle) {
 		m_pageTitle = pageTitle;
+	}
+
+	public void addUsedItem(ContentItem item) {
+		m_usedItemList.add(item);
+	}
+
+	public List<ContentItem> getUsedItemList() {
+		return m_usedItemList;
 	}
 
 	@Override public String toString() {

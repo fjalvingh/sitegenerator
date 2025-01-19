@@ -58,15 +58,22 @@ public class Content {
 		}
 		for(File file : files) {
 			sb.setLength(len);
-			sb.append("/").append(file.getName());
+			if(len > 0)
+				sb.append('/');
+			sb.append(file.getName());
 			if(file.isFile()) {
-				String relative = sb.toString().substring(1);
+				String relative = sb.toString();
 				ContentItem ci = new ContentItem(level, file, type, getType(file), relative);
 				if(ci.getFileType() == ContentFileType.Markdown) {
 					m_markDownItemCount++;
 				}
 				m_itemMap.put(relative, ci);
 				level.addItem(ci);
+
+				//-- Is this the index.md file?
+				if(ci.getFileType() == ContentFileType.Markdown && file.getName().toLowerCase().startsWith("index.")) {
+					level.setRootItem(ci);
+				}
 			} else if(file.isDirectory()) {
 				ContentLevel contentLevel = scanContent(sb, level, file, type);
 				if(null != contentLevel) {
@@ -135,5 +142,9 @@ public class Content {
 
 	public Set<ContentItem> getUsedResourceList() {
 		return m_usedResourceList;
+	}
+
+	@Nullable public ContentLevel getPageRootLevel() {
+		return m_pageRootLevel;
 	}
 }

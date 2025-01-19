@@ -1,6 +1,7 @@
 package to.etc.sigeto;
 
 import com.vladsch.flexmark.ast.Heading;
+import com.vladsch.flexmark.ast.Image;
 import com.vladsch.flexmark.ast.Link;
 import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.ext.emoji.EmojiImageType;
@@ -82,7 +83,7 @@ public class MarkdownChecker {
 	public void scanContent(List<Message> errorList, ContentItem item) throws Exception {
 		m_errorList = errorList;
 		m_currentItem = item;
-		System.out.println("Pre-parsing " + item.getRelativePath());
+		//System.out.println("Pre-parsing " + item.getRelativePath());
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		String text = Util.readFileAsString(item.getFile());
@@ -95,11 +96,26 @@ public class MarkdownChecker {
 	private void checkNode(Node node) {
 		if(node instanceof Link) {
 			checkLink((Link) node);
+		} else if(node instanceof Image) {
+			checkImage((Image) node);
 		} else if(node instanceof Heading) {
 			Heading heading = (Heading) node;
 			if(m_currentItem.getPageTitle() == null)
 				m_currentItem.setPageTitle(heading.getText().unescape());
 		}
+	}
+
+	private void checkImage(Image image) {
+		String url = image.getUrl().unescape();
+		if(!Content.isRelativePath(url))
+			return;
+
+		ContentItem item = findItemByURL(url);
+		if(null == item) {
+			m_errorList.add(new Message(m_currentItem, image.getLineNumber(), MsgType.Error, "Image link to unknown document: " + url));
+			return;
+		}
+		m_currentItem.addUsedItem(item);
 	}
 
 	/**
@@ -112,35 +128,11 @@ public class MarkdownChecker {
 			return;
 
 		ContentItem item = findItemByURL(url);
-
-		//if(url.indexOf(':') != -1)									// http(s): url?
-		//	return;													// We cannot check those currently
-		//if(url.startsWith("#"))
-		//	return;
-		//
-		//String fullPath;
-		//if(url.startsWith("/")) {
-		//	fullPath = url.substring(1);
-		//} else {
-		//	//-- Relative wrt the parent
-		//	Path path = Path.of(m_currentItem.getDirectoryPath());
-		//	Path resolvedPath = path.resolve(url).normalize();
-		//	fullPath = resolvedPath.toString();
-		//}
-		//
-		//ContentItem item = m_content.findItem(fullPath);
 		if(null == item) {
 			m_errorList.add(new Message(m_currentItem, link.getLineNumber(), MsgType.Error, "Link to unknown document: " + url));
 			return;
 		}
-
-		////-- It worked. Is this a Markdown link?
-		//if(item.getType() == ContentType.Markdown) {
-		//	//-- Change the URL to the generated target
-		//	String targetURL = Util.getFilenameSansExtension(url) + ".html";
-		//	link.setUrl(BasedSequence.of(targetURL));
-		//	link.setPageRef(BasedSequence.of(targetURL));
-		//}
+		m_currentItem.addUsedItem(item);
 	}
 
 	@Nullable

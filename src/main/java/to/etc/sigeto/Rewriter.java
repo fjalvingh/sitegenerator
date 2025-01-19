@@ -1,6 +1,9 @@
 package to.etc.sigeto;
 
+import to.etc.sigeto.utils.IndentWriter;
+
 import java.io.File;
+import java.io.OutputStreamWriter;
 
 /**
  * Rewrite the site structure from the confluence export
@@ -24,12 +27,33 @@ public class Rewriter {
 	}
 
 	private void run() throws Exception {
+		ContentLevel rootLevel = m_content.getPageRootLevel();
+		if(null == rootLevel) {
+			throw new IllegalStateException("root level is null");
+		}
 
+		IndentWriter w = new IndentWriter(new OutputStreamWriter(System.out));
+		renderInfo(w, rootLevel);
 
+	}
 
-
-
-
-
+	private void renderInfo(IndentWriter w, ContentLevel level) throws Exception {
+		w.println("Level " + level.getRelativePath());
+		w.inc();
+		for(ContentItem item : level.getSubItems()) {
+			w.println("Item " + item.getRelativePath());
+			w.inc();
+			for(ContentItem used : item.getUsedItemList()) {
+				w.println("Uses " + used.getRelativePath());
+			}
+			w.dec();
+		}
+		w.dec();
+		w.println("-- sublevels");
+		w.inc();
+		for(ContentLevel subLevel : level.getSubLevelList()) {
+			renderInfo(w, subLevel);
+		}
+		w.dec();
 	}
 }
