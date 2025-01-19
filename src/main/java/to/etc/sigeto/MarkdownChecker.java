@@ -52,6 +52,10 @@ public class MarkdownChecker {
 		m_content = content;
 		MutableDataSet options = new MutableDataSet();
 		options.set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_ONLY);
+
+		//-- Set this if we want h1 levels to be shown in the toc too. Usually h1 is the document title.
+		//options.set(TocExtension.LEVELS, 0x1e);
+
 		options.set(Parser.EXTENSIONS, Arrays.asList(
 			TablesExtension.create(),
 			StrikethroughExtension.create(),
