@@ -138,11 +138,12 @@ public class Util {
 		while(iter.hasNext()) {
 			ImageReader reader = iter.next();
 			try {
-				ImageInputStream stream = new FileImageInputStream(imgFile);
-				reader.setInput(stream);
-				int width = reader.getWidth(reader.getMinIndex());
-				int height = reader.getHeight(reader.getMinIndex());
-				return new Dimension(width, height);
+				try(ImageInputStream stream = new FileImageInputStream(imgFile)) {
+					reader.setInput(stream);
+					int width = reader.getWidth(reader.getMinIndex());
+					int height = reader.getHeight(reader.getMinIndex());
+					return new Dimension(width, height);
+				}
 			} catch(IOException e) {
 				System.out.println("Error reading image: " + imgFile.getAbsolutePath() + ": " + e.getMessage());
 			} finally {
