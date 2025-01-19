@@ -5,8 +5,10 @@ import org.eclipse.jdt.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class Content {
 	/** The map of relative path to item */
@@ -17,41 +19,62 @@ public class Content {
 	/** For MarkDown items this is the rendering of the file, after all checks. */
 	private String m_renderedContent;
 
+	private Set<ContentItem> m_usedResourceList = new HashSet<>();
+
+	@Nullable
+	private ContentLevel m_pageRootLevel;
+
+	@Nullable
+	private ContentLevel m_blogRootLevel;
+
 	public static Content create(File root) {
 		StringBuilder sb = new StringBuilder();
 		Content content = new Content();
 
 		//-- Scan pages
 		File pageRoot = new File(root, "pages");
+		File blogRoot = new File(root, "blog");
+
 		if(pageRoot.exists() && pageRoot.isDirectory()) {
-			content.scanContent(sb, pageRoot, ContentType.Page);
+			content.m_pageRootLevel = content.scanContent(sb, null, pageRoot, ContentType.Page);
 		}
 
 		//-- Scan blog entries
-		File blogRoot = new File(root, "blog");
 		if(blogRoot.exists() && blogRoot.isDirectory()) {
 			sb.setLength(0);
-			content.scanContent(sb, blogRoot, ContentType.Blog);
+			content.m_blogRootLevel = content.scanContent(sb, null, blogRoot, ContentType.Blog);
 		}
 		return content;
 	}
 
-	private void scanContent(StringBuilder sb, File root, ContentType type) {
+	@Nullable
+	private ContentLevel scanContent(StringBuilder sb, @Nullable ContentLevel parentLevel, File root, ContentType type) {
 		int len = sb.length();
-		for(File file : root.listFiles()) {
+		ContentLevel level = new ContentLevel(root, sb.toString(), type, parentLevel);
+
+		File[] files = root.listFiles();
+		if(null == files || files.length == 0) {
+			return null;
+		}
+		for(File file : files) {
 			sb.setLength(len);
 			sb.append("/").append(file.getName());
 			if(file.isFile()) {
 				String relative = sb.toString().substring(1);
-				ContentItem ci = new ContentItem(file, type, getType(file), relative);
+				ContentItem ci = new ContentItem(level, file, type, getType(file), relative);
 				if(ci.getFileType() == ContentFileType.Markdown) {
 					m_markDownItemCount++;
 				}
 				m_itemMap.put(relative, ci);
+				level.addItem(ci);
 			} else if(file.isDirectory()) {
-				scanContent(sb, file, type);
+				ContentLevel contentLevel = scanContent(sb, level, file, type);
+				if(null != contentLevel) {
+					level.addSubLevel(contentLevel);
+				}
 			}
 		}
+		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() ? null : level;
 	}
 
 	private ContentFileType getType(File file) {
@@ -104,5 +127,13 @@ public class Content {
 
 	public void setRenderedContent(String renderedContent) {
 		m_renderedContent = renderedContent;
+	}
+
+	void appendUsedResource(ContentItem item) {
+		m_usedResourceList.add(item);
+	}
+
+	public Set<ContentItem> getUsedResourceList() {
+		return m_usedResourceList;
 	}
 }

@@ -62,13 +62,13 @@ public class Main {
 				throw new MessageException("Template root does not exist: " + templateRoot);
 			}
 
-			//-- Find the content root
-			File contentRoot = new File(m_inputRoot, "content");
-			if(!contentRoot.exists() || !contentRoot.isDirectory()) {
-				throw new MessageException("Content root does not exist: " + contentRoot);
-			}
+			////-- Find the content root
+			//File contentRoot = new File(m_inputRoot, "content");
+			//if(!contentRoot.exists() || !contentRoot.isDirectory()) {
+			//	throw new MessageException("Content root does not exist: " + contentRoot);
+			//}
 
-			Content content = Content.create(contentRoot);
+			Content content = Content.create(sourceRoot);
 			if(content.getMarkDownItemCount() == 0) {
 				throw new MessageException("No markdown source files found at " + sourceRoot);
 			}
@@ -88,6 +88,12 @@ public class Main {
 				}
 				System.exit(9);
 			}
+
+			if(true) {
+				Rewriter.rewrite(content, mc, new File("/tmp/reformatted"));
+				return;
+			}
+
 
 			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
 			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);

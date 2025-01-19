@@ -1,5 +1,7 @@
 package to.etc.sigeto;
 
+import org.eclipse.jdt.annotation.NonNull;
+
 import java.io.File;
 
 public class ContentItem {
@@ -13,11 +15,24 @@ public class ContentItem {
 
 	private String m_pageTitle;
 
-	public ContentItem(File file, ContentType type, ContentFileType fileType, String relativePath) {
+	@NonNull
+	private ContentLevel m_level;
+
+	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
+		m_level = level;
 		m_file = file;
 		m_type = type;
 		m_fileType = fileType;
 		m_relativePath = relativePath;
+	}
+
+	@NonNull
+	public ContentLevel getLevel() {
+		return m_level;
+	}
+
+	public void setLevel(@NonNull ContentLevel level) {
+		m_level = level;
 	}
 
 	public File getFile() {
