@@ -89,10 +89,10 @@ public class Main {
 				System.exit(9);
 			}
 
-			if(true) {
-				Rewriter.rewrite(content, mc, new File("/home/jal/git/testsite/pages"));
-				return;
-			}
+			//if(true) {
+			//	Rewriter.rewrite(content, mc, new File("/home/jal/git/testsite/pages"));
+			//	return;
+			//}
 
 
 			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.

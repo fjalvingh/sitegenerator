@@ -115,7 +115,7 @@ public class MarkdownChecker {
 			m_errorList.add(new Message(m_currentItem, image.getLineNumber(), MsgType.Error, "Image link to unknown document: " + url));
 			return;
 		}
-		m_currentItem.addUsedItem(item);
+		m_currentItem.addUsedItem(item, url);
 	}
 
 	/**
@@ -132,7 +132,7 @@ public class MarkdownChecker {
 			m_errorList.add(new Message(m_currentItem, link.getLineNumber(), MsgType.Error, "Link to unknown document: " + url));
 			return;
 		}
-		m_currentItem.addUsedItem(item);
+		m_currentItem.addUsedItem(item, url);
 	}
 
 	@Nullable

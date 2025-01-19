@@ -3,31 +3,36 @@ package to.etc.sigeto;
 import org.eclipse.jdt.annotation.NonNull;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ContentItem {
 	private final File m_file;
+
+	private String m_name;
 
 	private final ContentType m_type;
 
 	private final ContentFileType m_fileType;
 
-	private final String m_relativePath;
+	//private final String m_relativePath;
 
 	private String m_pageTitle;
 
 	@NonNull
 	private ContentLevel m_level;
 
-	private List<ContentItem> m_usedItemList = new ArrayList<>();
+	/** Used content items, and each item has a list of relative paths used. */
+	private Map<ContentItem, Set<String>> m_usedItemList = new HashMap<>();
 
 	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
 		m_level = level;
 		m_file = file;
+		m_name = file.getName();
 		m_type = type;
 		m_fileType = fileType;
-		m_relativePath = relativePath;
 	}
 
 	@NonNull
@@ -35,8 +40,17 @@ public class ContentItem {
 		return m_level;
 	}
 
+	public void moveTo(@NonNull ContentLevel level, @NonNull String newName) {
+		if(m_level != level) {
+			m_level.getSubItems().remove(this);				// Remove from old level
+			level.getSubItems().add(this);						// Add to new level
+			m_level = level;
+		}
+		m_name = newName;
+	}
+
 	public String getName() {
-		return m_file.getName();
+		return m_name;
 	}
 
 	public void setLevel(@NonNull ContentLevel level) {
@@ -56,14 +70,12 @@ public class ContentItem {
 	}
 
 	public String getRelativePath() {
-		return m_relativePath;
+		String lp = m_level.getRelativePath();
+		return lp.length() == 0 ? getName() : lp + "/" + getName();
 	}
 
 	public String getDirectoryPath() {
-		int pos = m_relativePath.lastIndexOf("/");
-		if(pos == -1)
-			return "";
-		return m_relativePath.substring(0, pos + 1);
+		return m_level.getRelativePath();
 	}
 
 	public String getPageTitle() {
@@ -74,15 +86,22 @@ public class ContentItem {
 		m_pageTitle = pageTitle;
 	}
 
-	public void addUsedItem(ContentItem item) {
-		m_usedItemList.add(item);
+	public void addUsedItem(ContentItem item, String relativePath) {
+		m_usedItemList.computeIfAbsent(item, a -> new HashSet<>()).add(relativePath);
 	}
 
-	public List<ContentItem> getUsedItemList() {
+	public Map<ContentItem, Set<String>> getUsedItemList() {
 		return m_usedItemList;
 	}
 
+	/**
+	 * Return T if this is inside the level or a sublevel of that level.
+	 */
+	public boolean isInside(ContentLevel level) {
+		return m_level.isInside(level);
+	}
+
 	@Override public String toString() {
-		return m_relativePath + " [" + m_fileType + "]";
+		return getRelativePath() + " [" + m_fileType + "]";
 	}
 }

@@ -19,6 +19,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Iterator;
 
 public class Util {
@@ -152,4 +153,54 @@ public class Util {
 		}
 		throw new IOException("Not a known image file: " + imgFile.getAbsolutePath());
 	}
+
+	/**
+	 * Delete the directory <i>and</i> all it's contents.
+	 */
+	static public void deleteDir(@NonNull File f) {
+		dirEmpty(f);
+		delete(f);
+	}
+
+	/**
+	 * Deletes the file or (empty) directory, and reports an error in the log if that fails.
+	 */
+	public static void delete(File file) {
+		try {
+			Files.delete(file.toPath());
+		} catch(Exception x) {
+			//-- ignore
+		}
+	}
+
+	/**
+	 * Deletes all files in the directory. It skips errors and tries to delete
+	 * as much as possible. If elogb is not null then all errors are written
+	 * there.
+	 */
+	static public boolean dirEmpty(@NonNull File dirf) {
+		boolean hase = false;
+
+		File[] ar = dirf.listFiles();
+		if(ar == null)
+			return true;
+
+		for(int i = 0; i < ar.length; i++) {
+			String name = ar[i].getName();
+			if(!name.equals(".") && !name.equals("..")) {
+				try {
+					if(ar[i].isDirectory())
+						dirEmpty(ar[i]);
+					if(!ar[i].delete())
+						throw new IOException("Delete failed?");
+				} catch(IOException x) {
+					hase = true;
+				}
+			}
+		}
+
+		return !hase;
+	}
+
+
 }

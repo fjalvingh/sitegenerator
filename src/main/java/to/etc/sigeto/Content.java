@@ -36,12 +36,14 @@ public class Content {
 		File blogRoot = new File(root, "blog");
 
 		if(pageRoot.exists() && pageRoot.isDirectory()) {
+			sb.append(pageRoot.getName());
 			content.m_pageRootLevel = content.scanContent(sb, null, pageRoot, ContentType.Page);
 		}
 
 		//-- Scan blog entries
 		if(blogRoot.exists() && blogRoot.isDirectory()) {
 			sb.setLength(0);
+			sb.append(blogRoot.getName());
 			content.m_blogRootLevel = content.scanContent(sb, null, blogRoot, ContentType.Blog);
 		}
 		return content;
@@ -78,9 +80,27 @@ public class Content {
 				ContentLevel contentLevel = scanContent(sb, level, file, type);
 				if(null != contentLevel) {
 					level.addSubLevel(contentLevel);
+
+					//-- Do we have an index for this thing?
 				}
 			}
 		}
+
+		//-- For every sublevel found here: is there an index page for it here too?
+		for(ContentLevel sub : level.getSubLevelList()) {
+			if(sub.hasMarkdown()) {
+				ContentItem item = level.findItemByName(sub.getName() + ".md");
+				if(null == item) {
+					item = level.findItemByName(sub.getName() + ".mdown");
+				}
+				if(null != item) {
+					level.setRootItem(item);
+				} else {
+					System.out.println(sub.getRelativePath() + ": no index page found for this sublevel");
+				}
+			}
+		}
+
 		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() ? null : level;
 	}
 
