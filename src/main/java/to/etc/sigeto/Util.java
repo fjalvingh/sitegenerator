@@ -2,6 +2,11 @@ package to.etc.sigeto;
 
 import org.eclipse.jdt.annotation.NonNull;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.FileImageInputStream;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -14,6 +19,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 
 public class Util {
 	static public final long KB = 1024L;
@@ -121,5 +127,28 @@ public class Util {
 		if(pos < slash)
 			return name;
 		return name.substring(0, pos);
+	}
+
+	public static Dimension getImageDimension(File imgFile) throws IOException {
+		int pos = imgFile.getName().lastIndexOf(".");
+		if(pos == -1)
+			throw new IOException("No extension for file: " + imgFile.getAbsolutePath());
+		String suffix = imgFile.getName().substring(pos + 1);
+		Iterator<ImageReader> iter = ImageIO.getImageReadersBySuffix(suffix);
+		while(iter.hasNext()) {
+			ImageReader reader = iter.next();
+			try {
+				ImageInputStream stream = new FileImageInputStream(imgFile);
+				reader.setInput(stream);
+				int width = reader.getWidth(reader.getMinIndex());
+				int height = reader.getHeight(reader.getMinIndex());
+				return new Dimension(width, height);
+			} catch(IOException e) {
+				System.out.println("Error reading image: " + imgFile.getAbsolutePath() + ": " + e.getMessage());
+			} finally {
+				reader.dispose();
+			}
+		}
+		throw new IOException("Not a known image file: " + imgFile.getAbsolutePath());
 	}
 }

@@ -13,9 +13,7 @@ import com.vladsch.flexmark.util.data.MutableDataHolder;
 import org.jetbrains.annotations.NotNull;
 import to.etc.sigeto.unidiot.WrappedException;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -67,12 +65,14 @@ final public class MdImageRewriter implements NodeRenderer {
 			if(Content.isRelativePath(url)) {
 				ContentItem item = m_content.findItemByURL(url);
 				if(null != item) {
-					BufferedImage srcBi = ImageIO.read(item.getFile());            // Load the image
+					//BufferedImage srcBi = ImageIO.read(item.getFile());            // Load the image
+
+					Dimension sz = Util.getImageDimension(item.getFile());
 					Dimension maxImageSize = m_content.getMaxImageSize();
-					if(srcBi.getWidth() > maxImageSize.width) {                    // Only limit width
-						double factor = (double) maxImageSize.width / srcBi.getWidth();
-						int nw = (int) (srcBi.getWidth() * factor);
-						int nh = (int) (srcBi.getHeight() * factor);                // New size
+					if(sz.getWidth() > maxImageSize.width) {                    // Only limit width
+						double factor = (double) maxImageSize.width / sz.getWidth();
+						int nw = (int) (sz.getWidth() * factor);
+						int nh = (int) (sz.getHeight() * factor);                // New size
 
 						html
 							.withAttr()
@@ -93,8 +93,8 @@ final public class MdImageRewriter implements NodeRenderer {
 						html
 							.withAttr()
 							.attr("src", url)
-							.attr("width", Integer.toString(srcBi.getWidth()))
-							.attr("height", Integer.toString(srcBi.getHeight()))
+							.attr("width", Integer.toString(sz.width))
+							.attr("height", Integer.toString(sz.height))
 							.tag("img");
 						html.closeTag("img");
 					}
