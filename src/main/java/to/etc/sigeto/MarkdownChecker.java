@@ -14,15 +14,23 @@ import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
+import com.vladsch.flexmark.util.misc.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.yaml.snakeyaml.Yaml;
 import to.etc.sigeto.MdImageRewriter.MdFixImgExtension;
 import to.etc.sigeto.MdToGeneratedLinkResolver.MdLinkToGeneratedLinkExtension;
 
 import java.awt.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class MarkdownChecker {
@@ -37,6 +45,8 @@ public class MarkdownChecker {
 	private List<Message> m_errorList;
 
 	private Dimension m_maxImageSize = new Dimension(900, 900);
+
+	private final Yaml m_yaml = new Yaml();
 
 	public MarkdownChecker(Content content) {
 		m_content = content;
@@ -62,8 +72,8 @@ public class MarkdownChecker {
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		m_currentItem = item;
-		String text = Util.readFileAsString(item.getFile());
-		Document doc = m_parser.parse(text);
+		Pair<Document, String> result = parse(item.getFile());
+		Document doc = result.getFirst();
 
 		//walkNode(doc, node -> {
 		//	rewriteNode(node);
@@ -86,12 +96,72 @@ public class MarkdownChecker {
 		//System.out.println("Pre-parsing " + item.getRelativePath());
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
-		String text = Util.readFileAsString(item.getFile());
-		Document doc = m_parser.parse(text);
+		Pair<Document, String> result = parse(item.getFile());
+		Document doc = result.getFirst();
 		walkNode(doc, node -> {
 			checkNode(node);
 		});
+
+		String yamlText = result.getSecond();
+		if(null != yamlText && !yamlText.isBlank()) {
+			Map<String, Object> map = m_yaml.load(yamlText);
+			item.setFrontMatter(map);
+		}
 	}
+
+	private enum Segment {
+		beforeMd,
+		inYaml,
+		inMarkdown,
+	}
+
+	private Pair<Document, String> parse(File file) throws Exception {
+		StringBuilder yaml = new StringBuilder();
+		StringBuilder markdown = new StringBuilder();
+
+		Segment seg = Segment.beforeMd;
+		try(LineNumberReader reader = new LineNumberReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+			String line;
+			while(null != (line = reader.readLine())) {
+				switch(seg){
+					default:
+						throw new IllegalStateException(seg + " ??");
+
+					case beforeMd:
+						if(!line.isBlank()) {
+							//-- We have data...
+							if(line.trim().startsWith("---")) {
+								//-- Front matter found -> yaml mode
+								seg = Segment.inYaml;
+							} else {
+								//-- Not fron matter; must be 1st markdown thingy.
+								markdown.append(line).append("\n");
+								seg = Segment.inMarkdown;
+							}
+						}
+						break;
+
+					case inYaml:
+						if(line.trim().startsWith("---")) {
+							//-- End of yaml block. Move to markdown
+							seg = Segment.inMarkdown;
+						} else {
+							yaml.append(line).append("\n");
+						}
+						break;
+
+					case inMarkdown:
+						markdown.append(line).append("\n");
+						break;
+				}
+			}
+		}
+
+		//-- Parse frontmatter if present
+		Document doc = m_parser.parse(markdown.toString());
+		return new Pair<>(doc, yaml.toString());
+	}
+
 
 	private void checkNode(Node node) {
 		if(node instanceof Link) {

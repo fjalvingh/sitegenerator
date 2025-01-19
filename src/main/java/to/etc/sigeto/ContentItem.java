@@ -27,6 +27,8 @@ public class ContentItem {
 	/** Used content items, and each item has a list of relative paths used. */
 	private Map<ContentItem, Set<String>> m_usedItemList = new HashMap<>();
 
+	private final Map<String, Object> m_frontMatter = new HashMap<>();
+
 	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
 		m_level = level;
 		m_file = file;
@@ -114,5 +116,9 @@ public class ContentItem {
 
 	@Override public String toString() {
 		return getRelativePath() + " [" + m_fileType + "]";
+	}
+
+	public void setFrontMatter(Map<String, Object> map) {
+		m_frontMatter.putAll(map);
 	}
 }
