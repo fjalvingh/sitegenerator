@@ -68,7 +68,7 @@ public class Main {
 				throw new MessageException("Content root does not exist: " + contentRoot);
 			}
 
-			Content content = Content.create(sourceRoot);
+			Content content = Content.create(contentRoot);
 			if(content.getMarkDownItemCount() == 0) {
 				throw new MessageException("No markdown source files found at " + sourceRoot);
 			}
