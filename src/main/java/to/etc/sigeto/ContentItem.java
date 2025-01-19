@@ -74,6 +74,17 @@ public class ContentItem {
 		return lp.length() == 0 ? getName() : lp + "/" + getName();
 	}
 
+	public String getRelativeTargetPath() {
+		if(getFileType() == ContentFileType.Markdown) {
+			String lp = m_level.getRelativePath();
+			String name = Util.getFilenameSansExtension(getName()) + ".html";
+
+			return lp.length() == 0 ? name : lp + "/" + name;
+		} else {
+			return getRelativePath();
+		}
+	}
+
 	public String getDirectoryPath() {
 		return m_level.getRelativePath();
 	}

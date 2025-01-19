@@ -1,5 +1,8 @@
 package to.etc.sigeto;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PageModel {
 	private final String m_content;
 
@@ -28,4 +31,24 @@ public class PageModel {
 	public String siteURL(String url) {
 		return m_markdown.siteURL(url);
 	}
+
+	/**
+	 * Get path from high to low, for breadcrumbs.
+	 */
+	public List<ContentItem> getBreadcrumbPath() {
+		List<ContentItem> list = new ArrayList<>();
+		ContentLevel level = m_item.getLevel();
+		if(level.getParentLevel() == null) {
+			return list;
+		}
+		while(level != null) {
+			ContentItem rootItem = level.getRootItem();
+			if(rootItem != null) {
+				list.add(0, rootItem);
+			}
+			level = level.getParentLevel();
+		}
+		return list;
+	}
+
 }

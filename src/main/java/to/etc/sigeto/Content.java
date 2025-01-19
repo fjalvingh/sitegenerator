@@ -90,7 +90,7 @@ public class Content {
 						item = level.findItemByName(sub.getName() + ".mdown");
 					}
 					if(null != item) {
-						level.setRootItem(item);
+						sub.setRootItem(item);
 					} else {
 						System.out.println(sub.getRelativePath() + ": no index page found for this sublevel");
 					}

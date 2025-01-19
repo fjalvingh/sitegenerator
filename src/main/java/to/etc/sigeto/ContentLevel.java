@@ -108,4 +108,8 @@ final public class ContentLevel {
 	public List<ContentLevel> getSubLevelList() {
 		return m_subLevelList;
 	}
+
+	@Override public String toString() {
+		return getRelativePath() + " [" + getContentType() + "]";
+	}
 }
