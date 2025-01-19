@@ -67,10 +67,10 @@ public class Content {
 				m_itemMap.put(relative, ci);
 				level.addItem(ci);
 
-				//-- Is this the index.md file?
-				if(ci.getFileType() == ContentFileType.Markdown && file.getName().toLowerCase().startsWith("index.")) {
-					level.setRootItem(ci);
-				}
+				////-- Is this the index.md file?
+				//if(ci.getFileType() == ContentFileType.Markdown && file.getName().toLowerCase().startsWith("index.")) {
+				//	level.setRootItem(ci);
+				//}
 			} else if(file.isDirectory()) {
 				ContentLevel contentLevel = scanContent(sb, level, file, type);
 				if(null != contentLevel) {
@@ -82,7 +82,7 @@ public class Content {
 		}
 
 		//-- For every sublevel found here: is there an index page for it here too?
-		if(level.getParentLevel() != null) {
+		//if(level.getParentLevel() != null) {
 			for(ContentLevel sub : level.getSubLevelList()) {
 				if(sub.hasMarkdown()) {
 					ContentItem item = level.findItemByName(sub.getName() + ".md");
@@ -96,7 +96,7 @@ public class Content {
 					}
 				}
 			}
-		}
+		//}
 
 		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() ? null : level;
 	}

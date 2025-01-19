@@ -121,4 +121,8 @@ public class ContentItem {
 	public void setFrontMatter(Map<String, Object> map) {
 		m_frontMatter.putAll(map);
 	}
+
+	public Map<String, Object> getFrontMatter() {
+		return m_frontMatter;
+	}
 }

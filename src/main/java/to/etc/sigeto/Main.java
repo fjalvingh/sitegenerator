@@ -89,19 +89,15 @@ public class Main {
 				System.exit(9);
 			}
 
-			//if(true) {
-			//	Rewriter.rewrite(content, mc, new File("/home/jal/git/testsite/pages"));
-			//	return;
-			//}
-
-
-			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
-			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
+			//-- Create the site menu
+			Menu menu = Menu.create(content);
 
 			//-- Now render
+			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
+			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
 			Util.dirEmpty(outputRoot);
 			for(ContentItem item : content.getItemList()) {
-				renderItem(outputRoot, templateEngine, mc, item);
+				renderItem(outputRoot, templateEngine, mc, item, menu);
 			}
 
 			//-- Copy theme data
@@ -133,9 +129,9 @@ public class Main {
 		}
 	}
 
-	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item) throws Exception {
+	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Menu menu) throws Exception {
 		if(item.getFileType() == ContentFileType.Markdown) {
-			renderMarkdown(outputRoot, templateEngine, mc, item);
+			renderMarkdown(outputRoot, templateEngine, mc, item, menu);
 		} else {
 			String relativePath = item.getRelativePath();
 			File out = new File(outputRoot, relativePath);
@@ -147,7 +143,7 @@ public class Main {
 		}
 	}
 
-	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item) throws Exception {
+	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Menu menu) throws Exception {
 		String render = mc.renderContent(item);
 		String relativePath = item.getRelativePath();
 		int pos = relativePath.lastIndexOf(".");
@@ -162,7 +158,7 @@ public class Main {
 
 		TemplateOutput output = new StringOutput(65536);
 		Map<String, Object> model = new HashMap<>();
-		PageModel pm = new PageModel(render, mc, item);
+		PageModel pm = new PageModel(render, mc, item, menu);
 		model.put("page", pm);
 		templateEngine.render("base.jte", pm, output);
 

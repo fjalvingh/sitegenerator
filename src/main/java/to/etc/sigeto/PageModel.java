@@ -10,10 +10,13 @@ public class PageModel {
 
 	private final ContentItem m_item;
 
-	public PageModel(String content, MarkdownChecker markdown, ContentItem item) {
+	private final Menu m_menu;
+
+	public PageModel(String content, MarkdownChecker markdown, ContentItem item, Menu menu) {
 		m_content = content;
 		m_markdown = markdown;
 		m_item = item;
+		m_menu = menu;
 	}
 
 	public String getContent() {
@@ -28,8 +31,43 @@ public class PageModel {
 		return m_item.getPageTitle() == null ? "Content page" : m_item.getPageTitle();
 	}
 
+	public Menu getMenu() {
+		return m_menu;
+	}
+
+	public MenuItem getMenuRoot() {
+		return m_menu.getRoot();
+	}
+
 	public String siteURL(String url) {
 		return m_markdown.siteURL(url);
+	}
+
+	public boolean isCurrentItem(MenuItem item) {
+		if(null == item) {
+			return false;
+		}
+		return m_item == item.getItem();
+	}
+
+	public boolean containsCurrentItem(MenuItem item) {
+		ContentLevel menuLevel = item.getLevel();				// The level for the menu
+		return menuLevel.isInside(item.getLevel());
+	}
+
+	public boolean mustShowItem(MenuItem menu) {
+		if(m_item.getRelativePath().startsWith("index/pdp-1144"))
+			System.out.println();
+		if(null == menu) {
+			return false;
+		}
+		ContentItem menuItem = menu.getItem();
+		if(menuItem == null) {							// The root item contains all
+			return true;
+		}
+
+		ContentLevel currentItemLevel = m_item.getLevel();
+		return currentItemLevel.isInside(menuItem.getLevel());
 	}
 
 	/**
