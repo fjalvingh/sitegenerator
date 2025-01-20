@@ -56,7 +56,7 @@ public class PageModel {
 	}
 
 	public boolean mustShowItem(MenuItem menu) {
-		if(m_item.getRelativePath().startsWith("index/pdp-1144"))
+		if(m_item.getRelativePath().startsWith("index/pdp-11"))
 			System.out.println();
 		if(null == menu) {
 			return false;
@@ -67,7 +67,9 @@ public class PageModel {
 		}
 
 		ContentLevel currentItemLevel = m_item.getLevel();
-		return currentItemLevel.isInside(menuItem.getLevel());
+
+		return menuItem.getLevel().isInside(currentItemLevel);
+		//return currentItemLevel.isInside(menuItem.getLevel());
 	}
 
 	/**

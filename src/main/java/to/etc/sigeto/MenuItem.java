@@ -67,4 +67,9 @@ final public class MenuItem {
 	public ContentLevel getLevel() {
 		return m_level;
 	}
+
+	@Override
+	public String toString() {
+		return m_item.getRelativePath() + " [" + m_level.getRelativePath() + "] " + m_title;
+	}
 }

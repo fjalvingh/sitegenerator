@@ -47,7 +47,7 @@
 		<!-- JDK properties -->
 		<source.jdk.version>17</source.jdk.version>
 		<target.jdk.version>17</target.jdk.version>
-		<ecj.version>3.20.0</ecj.version>
+		<ecj.version>3.38.0</ecj.version>
 
 		<!-- Plugin versions -->
 		<maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
@@ -172,7 +172,7 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<finalName>tu58t</finalName>
+							<finalName>sitegen</finalName>
 							<minimizeJar>false</minimizeJar>
 							<createDependencyReducedPom>false</createDependencyReducedPom>
 							<shadedArtifactAttached>true</shadedArtifactAttached>
