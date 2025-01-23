@@ -35,6 +35,14 @@ public class Content {
 		if(null == rootLevel)
 			throw new MessageException("No content inside the content directory");
 		content.m_pageRootLevel = rootLevel;
+
+		//-- For the root level the page starts at index.md
+		for(ContentItem subItem : rootLevel.getSubItems()) {
+			if(subItem.getFileType() == ContentFileType.Markdown && subItem.getRelativePath().startsWith("index")) {
+				rootLevel.setRootItem(subItem);
+				break;
+			}
+		}
 		return content;
 	}
 
