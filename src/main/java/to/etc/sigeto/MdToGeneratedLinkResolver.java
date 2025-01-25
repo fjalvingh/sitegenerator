@@ -42,11 +42,14 @@ public class MdToGeneratedLinkResolver implements LinkResolver {
 	}
 
 	private String fixLink(String url) {
+		if(url.startsWith("http:") || url.startsWith("https:")) {
+			return url;
+		}
 		String ext = Util.getExtension(url);
 		if(ext.equalsIgnoreCase("md") || ext.equalsIgnoreCase("mdown")) {
 			url = Util.getFilenameSansExtension(url) + ".html";
+			url = Path.of(url).normalize().toString();
 		}
-		url = Path.of(url).normalize().toString();
 		return url;
 	}
 

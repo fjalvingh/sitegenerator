@@ -82,6 +82,8 @@ public class MarkdownChecker {
 		//walkNode(doc, node -> {
 		//	rewriteNode(node);
 		//});
+		if(m_currentItem.getName().startsWith("hp-16702"))
+			System.out.println();
 		return m_renderer.render(doc);
 	}
 
@@ -197,6 +199,8 @@ public class MarkdownChecker {
 	 * replace it with a html link to the generated page.
 	 */
 	private void checkLink(Link link) {
+		if(m_currentItem.getName().startsWith("hp-16702"))
+			System.out.println();
 		String url = link.getUrl().unescape();
 		if(!Content.isRelativePath(url))
 			return;
