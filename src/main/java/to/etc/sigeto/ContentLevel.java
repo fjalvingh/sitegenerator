@@ -39,6 +39,12 @@ final public class ContentLevel {
 		return m_levelDirectory.getName();
 	}
 
+	/** T if this is the level that represents the home page (and its subpages) */
+	public boolean isIndexLevel() {
+		ContentItem rootItem = m_rootItem;
+		return rootItem != null && rootItem.isIndexItem();
+	}
+
 	@Nullable
 	public ContentItem findItemByName(String name) {
 		for(ContentItem item : getSubItems()) {

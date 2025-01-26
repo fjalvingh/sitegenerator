@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PageModel {
+	private final Content m_siteContent;
+
 	private final String m_content;
 
 	private final MarkdownChecker m_markdown;
 
 	private final ContentItem m_item;
 
-	private final Menu m_menu;
-
-	public PageModel(String content, MarkdownChecker markdown, ContentItem item, Menu menu) {
+	public PageModel(Content siteContent, String content, MarkdownChecker markdown, ContentItem item) {
+		m_siteContent = siteContent;
 		m_content = content;
 		m_markdown = markdown;
 		m_item = item;
-		m_menu = menu;
 	}
 
 	public String getContent() {
@@ -32,11 +32,11 @@ public class PageModel {
 	}
 
 	public Menu getMenu() {
-		return m_menu;
+		return m_siteContent.getMenu();
 	}
 
 	public MenuItem getMenuRoot() {
-		return m_menu.getRoot();
+		return getMenu().getRoot();
 	}
 
 	public String siteURL(String url) {
@@ -56,8 +56,8 @@ public class PageModel {
 	}
 
 	public boolean mustShowItem(MenuItem menu) {
-		if(m_item.getRelativePath().startsWith("index/pdp-11"))
-			System.out.println();
+		//if(m_item.getRelativePath().startsWith("index/pdp-11"))
+		//	System.out.println();
 		if(null == menu) {
 			return false;
 		}
@@ -76,19 +76,19 @@ public class PageModel {
 	 * Get path from high to low, for breadcrumbs.
 	 */
 	public List<ContentItem> getBreadcrumbPath() {
-		if(m_item.getRelativePath().startsWith("about")) {
-			System.out.println();
-		}
+		//if(m_item.getRelativePath().startsWith("index/pdp-1144.md")) {
+		//	System.out.println();
+		//}
 		List<ContentItem> list = new ArrayList<>();
 		ContentLevel level = m_item.getLevel();
 		if(level.getParentLevel() == null) {
 			//-- If this is not the root index page then always add it
-			if(!m_item.getRelativePath().startsWith("index.md")) {
-				list.add(m_menu.getRoot().getLevel().getRootItem());
+			if(!m_item.isIndexItem()) {
+				list.add(m_siteContent.getIndexRootLevel().getRootItem());
 			}
 			return list;
 		}
-		while(level != null) {
+		while(level != null && level != m_siteContent.getPageRootLevel()) {
 			ContentItem rootItem = level.getRootItem();
 			if(rootItem != null) {
 				list.add(0, rootItem);

@@ -87,12 +87,6 @@ public class MarkdownChecker {
 		return m_renderer.render(doc);
 	}
 
-	//private void rewriteNode(Node node) {
-	//	if(node instanceof Link) {
-	//		checkLink((Link) node);
-	//	}
-	//}
-
 	/**
 	 * Pre-scan the content and report any errors.
 	 */
@@ -112,6 +106,34 @@ public class MarkdownChecker {
 		if(null != yamlText && !yamlText.isBlank()) {
 			Map<String, Object> map = m_yaml.load(yamlText);
 			item.setFrontMatter(map);
+
+			//-- Handle metadata
+			Object o = map.get("tags");
+			if(o instanceof String) {
+				appendTagString(item, (String) o);
+			} else if(o instanceof List<?>) {
+				List<?> list = (List<?>) o;
+				for(Object object : list) {
+					if(object instanceof String) {
+						appendTagString(item, (String) object);
+					} else {
+						m_errorList.add(new Message(item, 0, MsgType.Error, "Unexpected type in tags"));
+					}
+				}
+			} else
+				m_errorList.add(new Message(item, 0, MsgType.Error, "Unexpected type in tags"));
+		}
+	}
+
+	private void appendTagString(ContentItem item, String text) {
+		if(text.isBlank())
+			return;
+		for(String s : text.split(",")) {
+			s = s.trim();
+			if(!s.isBlank()) {
+				ContentTag tag = m_content.getTag(s);
+				tag.addItem(item);
+			}
 		}
 	}
 

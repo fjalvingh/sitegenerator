@@ -24,7 +24,7 @@ public class Menu {
 	}
 
 	static public Menu create(Content content) {
-		ContentLevel rootLevel = content.getPageRootLevel();
+		ContentLevel rootLevel = content.getIndexRootLevel();
 		MenuItem rootItem = new MenuItem(null, rootLevel, rootLevel.getRootItem(), "root", "root", 0);
 		ContentLevel index = rootLevel.getSubLevelList().stream()
 			.filter(a -> a.getName().startsWith("index"))

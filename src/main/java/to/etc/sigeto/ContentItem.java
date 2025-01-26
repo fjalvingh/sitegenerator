@@ -11,6 +11,9 @@ import java.util.Set;
 public class ContentItem {
 	private final File m_file;
 
+	/** T if this is the index item (the home page) */
+	private final boolean m_indexItem;
+
 	private String m_name;
 
 	private final ContentType m_type;
@@ -29,12 +32,15 @@ public class ContentItem {
 
 	private final Map<String, Object> m_frontMatter = new HashMap<>();
 
-	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
+	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
+
+	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath, boolean indexItem) {
 		m_level = level;
 		m_file = file;
 		m_name = file.getName();
 		m_type = type;
 		m_fileType = fileType;
+		m_indexItem = indexItem;
 	}
 
 	@NonNull
@@ -124,5 +130,9 @@ public class ContentItem {
 
 	public Map<String, Object> getFrontMatter() {
 		return m_frontMatter;
+	}
+
+	public boolean isIndexItem() {
+		return m_indexItem;
 	}
 }

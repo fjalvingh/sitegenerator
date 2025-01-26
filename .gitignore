@@ -12,7 +12,7 @@ gen
 *.dll
 packages
 jte-classes
-testsite
+_output
 
 
 

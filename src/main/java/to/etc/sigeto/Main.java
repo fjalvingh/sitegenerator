@@ -13,9 +13,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -88,16 +86,14 @@ public class Main {
 				}
 				System.exit(9);
 			}
-
-			//-- Create the site menu
-			Menu menu = Menu.create(content);
+			content.complete();
 
 			//-- Now render
 			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
 			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
 			Util.dirEmpty(outputRoot);
 			for(ContentItem item : content.getItemList()) {
-				renderItem(outputRoot, templateEngine, mc, item, menu);
+				renderItem(outputRoot, templateEngine, mc, item, content);
 			}
 
 			//-- Copy theme data
@@ -129,9 +125,9 @@ public class Main {
 		}
 	}
 
-	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Menu menu) throws Exception {
+	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
 		if(item.getFileType() == ContentFileType.Markdown) {
-			renderMarkdown(outputRoot, templateEngine, mc, item, menu);
+			renderMarkdown(outputRoot, templateEngine, mc, item, content);
 		} else {
 			String relativePath = item.getRelativePath();
 			File out = new File(outputRoot, relativePath);
@@ -143,7 +139,7 @@ public class Main {
 		}
 	}
 
-	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Menu menu) throws Exception {
+	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
 		String render = mc.renderContent(item);
 		String relativePath = item.getRelativePath();
 		int pos = relativePath.lastIndexOf(".");
@@ -157,9 +153,7 @@ public class Main {
 		}
 
 		TemplateOutput output = new StringOutput(65536);
-		Map<String, Object> model = new HashMap<>();
-		PageModel pm = new PageModel(render, mc, item, menu);
-		model.put("page", pm);
+		PageModel pm = new PageModel(content, render, mc, item);
 		templateEngine.render("base.jte", pm, output);
 
 		Util.writeFileFromString(out, output.toString(), StandardCharsets.UTF_8);

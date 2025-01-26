@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class Content {
@@ -24,32 +25,43 @@ public class Content {
 
 	private ContentLevel m_pageRootLevel;
 
+	private ContentLevel m_indexRootLevel;
+
 	@Nullable
 	private ContentLevel m_blogRootLevel;
 
-	public static Content create(File root) {
-		StringBuilder sb = new StringBuilder();
-		Content content = new Content();
+	@Nullable
+	private Menu m_menu;
 
-		ContentLevel rootLevel = content.scanContent(sb, null, root, ContentType.Page);
+	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
+
+	public static Content create(File root) {
+		Content content = new Content();
+		content.initialize(root);
+		return content;
+	}
+
+	private void initialize(File root) {
+		StringBuilder sb = new StringBuilder();
+		ContentLevel rootLevel = scanContent(sb, null, root, ContentType.Page);
 		if(null == rootLevel)
 			throw new MessageException("No content inside the content directory");
-		content.m_pageRootLevel = rootLevel;
+		m_pageRootLevel = rootLevel;
+	}
 
-		//-- For the root level the page starts at index.md
-		for(ContentItem subItem : rootLevel.getSubItems()) {
-			if(subItem.getFileType() == ContentFileType.Markdown && subItem.getRelativePath().startsWith("index")) {
-				rootLevel.setRootItem(subItem);
-				break;
-			}
-		}
-		return content;
+	public void complete() {
+		//-- Create the site menu
+		m_menu = Menu.create(this);
 	}
 
 	@Nullable
 	private ContentLevel scanContent(StringBuilder sb, @Nullable ContentLevel parentLevel, File root, ContentType type) {
 		int len = sb.length();
-		ContentLevel level = new ContentLevel(root, sb.toString(), type, parentLevel);
+		String levelPath = sb.toString();
+		ContentLevel level = new ContentLevel(root, levelPath, type, parentLevel);
+		if(levelPath.equals("index")) {
+			m_indexRootLevel = level;
+		}
 
 		if(root.getName().equalsIgnoreCase("blogs")) {
 			type = ContentType.Blog;
@@ -68,17 +80,12 @@ public class Content {
 			sb.append(file.getName());
 			if(file.isFile()) {
 				String relative = sb.toString();
-				ContentItem ci = new ContentItem(level, file, type, getType(file), relative);
+				ContentItem ci = new ContentItem(level, file, type, getType(file), relative, file.getName().toLowerCase().startsWith("index."));
 				if(ci.getFileType() == ContentFileType.Markdown) {
 					m_markDownItemCount++;
 				}
 				m_itemMap.put(relative, ci);
 				level.addItem(ci);
-
-				////-- Is this the index.md file?
-				//if(ci.getFileType() == ContentFileType.Markdown && file.getName().toLowerCase().startsWith("index.")) {
-				//	level.setRootItem(ci);
-				//}
 			} else if(file.isDirectory()) {
 				ContentLevel contentLevel = scanContent(sb, level, file, type);
 				if(null != contentLevel) {
@@ -140,6 +147,10 @@ public class Content {
 		return true;
 	}
 
+	public ContentTag getTag(String tagName) {
+		return m_tagMap.computeIfAbsent(tagName.toLowerCase(), a -> new ContentTag(a));
+	}
+
 	public List<ContentItem> getItemList() {
 		return new ArrayList<ContentItem>(m_itemMap.values());
 	}
@@ -172,5 +183,13 @@ public class Content {
 	@NonNull
 	public ContentLevel getPageRootLevel() {
 		return m_pageRootLevel;
+	}
+
+	public ContentLevel getIndexRootLevel() {
+		return Objects.requireNonNull(m_indexRootLevel);
+	}
+
+	public Menu getMenu() {
+		return Objects.requireNonNull(m_menu);
 	}
 }

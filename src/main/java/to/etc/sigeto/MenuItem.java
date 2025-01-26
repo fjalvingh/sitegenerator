@@ -34,6 +34,9 @@ final public class MenuItem {
 		m_title = title;
 		m_sortTitle = sortTitle;
 		m_itemLevel = itemLevel;
+		if(level == null || item == null || title == null || sortTitle == null) {
+			throw new IllegalArgumentException("Arguments cannot be null");
+		}
 	}
 
 	public ContentItem getItem() {
