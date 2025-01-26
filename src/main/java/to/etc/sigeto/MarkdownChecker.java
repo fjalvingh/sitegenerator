@@ -109,6 +109,7 @@ public class MarkdownChecker {
 
 			//-- Handle metadata
 			Object o = map.get("tags");
+
 			if(o instanceof String) {
 				appendTagString(item, (String) o);
 			} else if(o instanceof List<?>) {
@@ -120,6 +121,8 @@ public class MarkdownChecker {
 						m_errorList.add(new Message(item, 0, MsgType.Error, "Unexpected type in tags"));
 					}
 				}
+			} else if(o == null) {
+				//-- Skip
 			} else
 				m_errorList.add(new Message(item, 0, MsgType.Error, "Unexpected type in tags"));
 		}

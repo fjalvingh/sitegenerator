@@ -43,7 +43,9 @@ public class Message {
 			if(m_lineNumber > 0) {
 				sb.append("(").append(m_lineNumber).append(") ");
 			}
+			sb.append(" ");
 		}
+
 		sb.append(m_message);
 		return sb.toString();
 	}
