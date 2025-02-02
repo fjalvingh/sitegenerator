@@ -48,7 +48,9 @@ public class Menu {
 			}
 		}
 		for(ContentItem item : subItems) {
-			createItemIf(rootItem, item, null);
+			if(item.getFileType() == ContentFileType.Markdown) {
+				createItemIf(rootItem, item, null);
+			}
 		}
 
 		//-- Now sort the items
