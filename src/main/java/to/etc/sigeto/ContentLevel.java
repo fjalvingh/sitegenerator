@@ -39,12 +39,6 @@ final public class ContentLevel {
 		return m_levelDirectory.getName();
 	}
 
-	/** T if this is the level that represents the home page (and its subpages) */
-	public boolean isIndexLevel() {
-		ContentItem rootItem = m_rootItem;
-		return rootItem != null && rootItem.isIndexItem();
-	}
-
 	@Nullable
 	public ContentItem findItemByName(String name) {
 		for(ContentItem item : getSubItems()) {
@@ -75,18 +69,21 @@ final public class ContentLevel {
 		return m_rootItem;
 	}
 
-	public void setRootItem(ContentItem rootItem) {
-		m_rootItem = rootItem;
-	}
-
 	@Nullable public ContentLevel getParentLevel() {
 		return m_parentLevel;
 	}
 
 	public void addItem(ContentItem item) {
-		m_subItems.add(item);
-		if(item.getFileType() == ContentFileType.Markdown)
+		if(item.getFileType() == ContentFileType.Markdown) {
 			m_hasMarkdown = true;
+
+			//-- Do we already have a md file? Then abort
+			if(m_subItems.stream().anyMatch(a -> a.getFileType() == ContentFileType.Markdown)) {
+				throw new MessageException(this + ": More than one markdown file found, this is not allowed");
+			}
+			m_rootItem = item;
+		}
+		m_subItems.add(item);
 	}
 
 	public void addSubLevel(ContentLevel level) {

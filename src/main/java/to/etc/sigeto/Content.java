@@ -25,8 +25,6 @@ public class Content {
 
 	private ContentLevel m_pageRootLevel;
 
-	private ContentLevel m_indexRootLevel;
-
 	@Nullable
 	private ContentLevel m_blogRootLevel;
 
@@ -59,14 +57,9 @@ public class Content {
 		int len = sb.length();
 		String levelPath = sb.toString();
 		ContentLevel level = new ContentLevel(root, levelPath, type, parentLevel);
-		if(levelPath.equals("index")) {
-			m_indexRootLevel = level;
-		}
-
-		if(root.getName().equalsIgnoreCase("blogs")) {
+		if(root.getName().equalsIgnoreCase("blogs") && m_blogRootLevel == null) {
 			type = ContentType.Blog;
-			if(m_blogRootLevel == null)
-				m_blogRootLevel = level;
+			m_blogRootLevel = level;
 		}
 
 		File[] files = root.listFiles();
@@ -80,7 +73,7 @@ public class Content {
 			sb.append(file.getName());
 			if(file.isFile()) {
 				String relative = sb.toString();
-				ContentItem ci = new ContentItem(level, file, type, getType(file), relative, file.getName().toLowerCase().startsWith("index."));
+				ContentItem ci = new ContentItem(level, file, type, getType(file), relative);
 				if(ci.getFileType() == ContentFileType.Markdown) {
 					m_markDownItemCount++;
 				}
@@ -96,22 +89,9 @@ public class Content {
 			}
 		}
 
-		//-- For every sublevel found here: is there an index page for it here too?
-		//if(level.getParentLevel() != null) {
-			for(ContentLevel sub : level.getSubLevelList()) {
-				if(sub.hasMarkdown()) {
-					ContentItem item = level.findItemByName(sub.getName() + ".md");
-					if(null == item) {
-						item = level.findItemByName(sub.getName() + ".mdown");
-					}
-					if(null != item) {
-						sub.setRootItem(item);
-					} else {
-						System.out.println(sub.getRelativePath() + ": no index page found for this sublevel");
-					}
-				}
-			}
-		//}
+		if(!level.hasMarkdown()) {
+			System.out.println("No index page found for directory " + level);
+		}
 
 		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() ? null : level;
 	}
@@ -183,10 +163,6 @@ public class Content {
 	@NonNull
 	public ContentLevel getPageRootLevel() {
 		return m_pageRootLevel;
-	}
-
-	public ContentLevel getIndexRootLevel() {
-		return Objects.requireNonNull(m_indexRootLevel);
 	}
 
 	public Menu getMenu() {

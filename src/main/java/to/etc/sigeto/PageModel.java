@@ -83,9 +83,9 @@ public class PageModel {
 		ContentLevel level = m_item.getLevel();
 		if(level.getParentLevel() == null) {
 			//-- If this is not the root index page then always add it
-			if(!m_item.isIndexItem()) {
-				list.add(m_siteContent.getIndexRootLevel().getRootItem());
-			}
+			//if(!m_item.isIndexItem()) {
+			//	list.add(m_siteContent.getIndexRootLevel().getRootItem());
+			//}
 			return list;
 		}
 		while(level != null && level != m_siteContent.getPageRootLevel()) {
