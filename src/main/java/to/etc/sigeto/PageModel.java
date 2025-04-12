@@ -76,24 +76,16 @@ public class PageModel {
 	 * Get path from high to low, for breadcrumbs.
 	 */
 	public List<ContentItem> getBreadcrumbPath() {
-		//if(m_item.getRelativePath().startsWith("index/pdp-1144.md")) {
-		//	System.out.println();
-		//}
 		List<ContentItem> list = new ArrayList<>();
-		ContentLevel level = m_item.getLevel();
-		if(level.getParentLevel() == null) {
-			//-- If this is not the root index page then always add it
-			//if(!m_item.isIndexItem()) {
-			//	list.add(m_siteContent.getIndexRootLevel().getRootItem());
-			//}
-			return list;
-		}
-		while(level != null && level != m_siteContent.getPageRootLevel()) {
+		ContentLevel level = m_item.getLevel();					// This is the item's level, we do not need that.
+		for(;;) {
+			level = level.getParentLevel();
+			if(null == level)
+				break;
 			ContentItem rootItem = level.getRootItem();
 			if(rootItem != null) {
 				list.add(0, rootItem);
 			}
-			level = level.getParentLevel();
 		}
 		return list;
 	}
