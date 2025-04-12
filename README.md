@@ -30,3 +30,19 @@ You can generate a TOC by adding the TOC macro, as follows:
 ```
 For options that can be used see the documentation of Flexmark.
 
+# Site structure
+
+The root of the site must contain index.md. This is the root page of the site content.
+All images used by index.md must be in that same root folder.
+
+The site has a hierarchical structure. An article mentioned in the root index.md must be
+a directory inside that root directory. Inside that directory there must be an index.md
+file which is the root article there. If that index.md has sub-articles these are directories
+in that subdirectory, etc.
+
+This keeps a page and its resources in a single directory, and every article has its own
+subdirectory with resources.
+
+
+
+

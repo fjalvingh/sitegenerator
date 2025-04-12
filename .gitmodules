@@ -1,3 +1,0 @@
-[submodule "testsite"]
-	path = testsite
-	url = git@github.com:fjalvingh/fjalvingh.github.io

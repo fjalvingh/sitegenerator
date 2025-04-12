@@ -14,7 +14,9 @@ import java.util.Set;
 
 /**
  * Rewrite the site structure from the confluence export
- * format to proper side format.
+ * format to proper side format. It moves each article into
+ * its own directory, and moves resources used by an article
+ * next to the article.
  */
 public class Rewriter {
 	private final Content m_content;
