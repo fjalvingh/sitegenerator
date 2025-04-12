@@ -23,9 +23,6 @@ public class Main {
 	@Option(name = "-o", aliases = {"-output"}, usage = "The output directory, default is _output in the site root")
 	private String m_outputRoot;
 
-	@Option(name = "-rewrite")
-	private boolean m_rewrite;
-
 	static public void main(String[] args) {
 		try {
 			new Main().run(args);
@@ -90,13 +87,6 @@ public class Main {
 				System.exit(9);
 			}
 			content.complete();
-
-			if(m_rewrite) {
-				System.out.println("REWRITING to " + outputRoot);
-				Rewriter.rewrite(content, mc, outputRoot);
-				System.exit(0);
-			}
-
 
 			//-- Now render
 			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
