@@ -15,13 +15,13 @@ import java.util.Map;
 import java.util.Set;
 
 final class MyTableHtmlNodeRenderer implements NodeRenderer { // extends TableNodeRenderer {
-	private final HtmlWriter htmlWriter;
+	private final HtmlWriter m_htmlWriter;
 
-	private final HtmlNodeRendererContext context;
+	private final HtmlNodeRendererContext m_context;
 
 	public MyTableHtmlNodeRenderer(HtmlNodeRendererContext context) {
-		this.htmlWriter = context.getWriter();
-		this.context = context;
+		m_htmlWriter = context.getWriter();
+		m_context = context;
 	}
 
 	@Override
@@ -32,69 +32,69 @@ final class MyTableHtmlNodeRenderer implements NodeRenderer { // extends TableNo
 	@Override
 	public void render(Node node) {
 		if(node instanceof TableBlock) {
-			this.renderBlock((TableBlock) node);
+			renderBlock((TableBlock) node);
 		} else if(node instanceof TableHead) {
-			this.renderHead((TableHead) node);
+			renderHead((TableHead) node);
 		} else if(node instanceof TableBody) {
-			this.renderBody((TableBody) node);
+			renderBody((TableBody) node);
 		} else if(node instanceof TableRow) {
-			this.renderRow((TableRow) node);
+			renderRow((TableRow) node);
 		} else if(node instanceof TableCell) {
-			this.renderCell((TableCell) node);
+			renderCell((TableCell) node);
 		}
 
 	}
 
 	private void renderBlock(TableBlock tableBlock) {
-		this.htmlWriter.line();
-		Map<String, String> tmap = new HashMap<>(this.getAttributes(tableBlock, "table"));
+		m_htmlWriter.line();
+		Map<String, String> tmap = new HashMap<>(getAttributes(tableBlock, "table"));
 		tmap.put("class", "ui-tbl");
-		this.htmlWriter.tag("table", tmap);
-		this.renderChildren(tableBlock);
-		this.htmlWriter.tag("/table");
-		this.htmlWriter.line();
+		m_htmlWriter.tag("table", tmap);
+		renderChildren(tableBlock);
+		m_htmlWriter.tag("/table");
+		m_htmlWriter.line();
 	}
 
 	private void renderHead(TableHead tableHead) {
-		this.htmlWriter.line();
-		this.htmlWriter.tag("thead", this.getAttributes(tableHead, "thead"));
-		this.renderChildren(tableHead);
-		this.htmlWriter.tag("/thead");
-		this.htmlWriter.line();
+		m_htmlWriter.line();
+		m_htmlWriter.tag("thead", getAttributes(tableHead, "thead"));
+		renderChildren(tableHead);
+		m_htmlWriter.tag("/thead");
+		m_htmlWriter.line();
 	}
 
 	private void renderBody(TableBody tableBody) {
-		this.htmlWriter.line();
-		this.htmlWriter.tag("tbody", this.getAttributes(tableBody, "tbody"));
-		this.renderChildren(tableBody);
-		this.htmlWriter.tag("/tbody");
-		this.htmlWriter.line();
+		m_htmlWriter.line();
+		m_htmlWriter.tag("tbody", getAttributes(tableBody, "tbody"));
+		renderChildren(tableBody);
+		m_htmlWriter.tag("/tbody");
+		m_htmlWriter.line();
 	}
 
 	private void renderRow(TableRow tableRow) {
-		this.htmlWriter.line();
-		this.htmlWriter.tag("tr", this.getAttributes(tableRow, "tr"));
-		this.renderChildren(tableRow);
-		this.htmlWriter.tag("/tr");
-		this.htmlWriter.line();
+		m_htmlWriter.line();
+		m_htmlWriter.tag("tr", getAttributes(tableRow, "tr"));
+		renderChildren(tableRow);
+		m_htmlWriter.tag("/tr");
+		m_htmlWriter.line();
 	}
 
 	private void renderCell(TableCell tableCell) {
 		String tagName = tableCell.isHeader() ? "th" : "td";
-		this.htmlWriter.line();
-		this.htmlWriter.tag(tagName, this.getCellAttributes(tableCell, tagName));
-		this.renderChildren(tableCell);
-		this.htmlWriter.tag("/" + tagName);
-		this.htmlWriter.line();
+		m_htmlWriter.line();
+		m_htmlWriter.tag(tagName, getCellAttributes(tableCell, tagName));
+		renderChildren(tableCell);
+		m_htmlWriter.tag("/" + tagName);
+		m_htmlWriter.line();
 	}
 
 	private Map<String, String> getAttributes(Node node, String tagName) {
-		return this.context.extendAttributes(node, tagName, Map.of());
+		return m_context.extendAttributes(node, tagName, Map.of());
 	}
 
 	private Map<String, String> getCellAttributes(TableCell tableCell, String tagName) {
-		return tableCell.getAlignment() != null ? this.context.extendAttributes(tableCell, tagName, Map.of("align", getAlignValue(tableCell.getAlignment()))) :
-			this.context.extendAttributes(tableCell, tagName, Map.of());
+		return tableCell.getAlignment() != null ? m_context.extendAttributes(tableCell, tagName, Map.of("align", getAlignValue(tableCell.getAlignment()))) :
+			m_context.extendAttributes(tableCell, tagName, Map.of());
 	}
 
 	private static String getAlignValue(TableCell.Alignment alignment) {
@@ -114,7 +114,7 @@ final class MyTableHtmlNodeRenderer implements NodeRenderer { // extends TableNo
 		Node next;
 		for(Node node = parent.getFirstChild(); node != null; node = next) {
 			next = node.getNext();
-			this.context.render(node);
+			m_context.render(node);
 		}
 	}
 

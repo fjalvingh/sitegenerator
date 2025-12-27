@@ -93,6 +93,13 @@
 			<version>0.27.0</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.commonmark</groupId>
+			<artifactId>commonmark-ext-heading-anchor</artifactId>
+			<version>0.27.0</version>
+		</dependency>
+
+
 		<!-- https://mvnrepository.com/artifact/gg.jte/jte -->
 		<dependency>
 			<groupId>gg.jte</groupId>

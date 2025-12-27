@@ -2,6 +2,7 @@ package to.etc.sigeto;
 
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
+import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Image;
 import org.commonmark.node.Link;
@@ -13,6 +14,7 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.yaml.snakeyaml.Yaml;
 import to.etc.sigeto.tables.MyTablesExtension;
+import to.etc.sigeto.tocextension.TocExtension;
 import to.etc.sigeto.utils.Pair;
 
 import java.io.File;
@@ -69,7 +71,9 @@ public class MarkdownChecker {
 
 		m_extList = List.of(
 			MyTablesExtension.create(),
-			StrikethroughExtension.create()
+			StrikethroughExtension.create(),
+			TocExtension.create(),
+			HeadingAnchorExtension.create()
 		);
 
 		m_parser = Parser.builder()
