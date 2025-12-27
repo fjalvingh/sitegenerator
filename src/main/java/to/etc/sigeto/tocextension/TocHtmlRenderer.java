@@ -110,10 +110,12 @@ final public class TocHtmlRenderer implements NodeRenderer {
 		//-- Concatenate texts
 		StringBuilder sb = new StringBuilder();
 		heading.accept(new AbstractVisitor() {
+			@Override
 			public void visit(Text text) {
 				sb.append(text.getLiteral());
 			}
 
+			@Override
 			public void visit(Code code) {
 				sb.append(code.getLiteral());
 			}

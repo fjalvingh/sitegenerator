@@ -92,7 +92,6 @@ public class Content {
 						level.addSubLevel(contentLevel);
 					}
 				}
-
 			}
 		}
 
