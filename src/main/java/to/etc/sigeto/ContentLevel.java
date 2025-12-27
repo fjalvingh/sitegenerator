@@ -21,6 +21,8 @@ final public class ContentLevel {
 
 	private final List<ContentLevel> m_subLevelList = new ArrayList<>();
 
+	private final List<ContentLevel> m_blogEntryList = new ArrayList<>();
+
 	private ContentItem m_rootItem;
 
 	@Nullable
@@ -90,6 +92,10 @@ final public class ContentLevel {
 		m_subLevelList.add(level);
 	}
 
+	public void addBlogEntry(ContentLevel level) {
+		m_blogEntryList.add(level);
+	}
+
 	public boolean hasMarkdown() {
 		return m_hasMarkdown;
 	}
@@ -106,6 +112,10 @@ final public class ContentLevel {
 			test = test.getParentLevel();
 		}
 		return false;
+	}
+
+	public List<ContentLevel> getBlogEntryList() {
+		return m_blogEntryList;
 	}
 
 	public List<ContentLevel> getSubLevelList() {

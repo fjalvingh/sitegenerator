@@ -26,9 +26,6 @@ public class Content {
 	private ContentLevel m_pageRootLevel;
 
 	@Nullable
-	private ContentLevel m_blogRootLevel;
-
-	@Nullable
 	private Menu m_menu;
 
 	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
@@ -57,10 +54,10 @@ public class Content {
 		int len = sb.length();
 		String levelPath = sb.toString();
 		ContentLevel level = new ContentLevel(root, levelPath, type, parentLevel);
-		if(root.getName().equalsIgnoreCase("blogs") && m_blogRootLevel == null) {
-			type = ContentType.Blog;
-			m_blogRootLevel = level;
-		}
+		//if(root.getName().equalsIgnoreCase("blogs") && m_blogRootLevel == null) {
+		//	type = ContentType.Blog;
+		//	m_blogRootLevel = level;
+		//}
 
 		File[] files = root.listFiles();
 		if(null == files || files.length == 0) {
@@ -80,12 +77,22 @@ public class Content {
 				m_itemMap.put(relative, ci);
 				level.addItem(ci);
 			} else if(file.isDirectory()) {
-				ContentLevel contentLevel = scanContent(sb, level, file, type);
-				if(null != contentLevel) {
-					level.addSubLevel(contentLevel);
+				//-- Should not have these inside a blog dir
+				if(type == ContentType.Blog)
+					throw new MessageException("Unexpected directory " + file + " inside blog entry");
 
-					//-- Do we have an index for this thing?
+				if(isBlogDirectory(file)) {
+					ContentLevel contentLevel = scanContent(sb, level, file, ContentType.Blog);
+					if(null != contentLevel) {
+						level.addBlogEntry(contentLevel);
+					}
+				} else {
+					ContentLevel contentLevel = scanContent(sb, level, file, type);
+					if(null != contentLevel) {
+						level.addSubLevel(contentLevel);
+					}
 				}
+
 			}
 		}
 
@@ -94,6 +101,44 @@ public class Content {
 		}
 
 		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() ? null : level;
+	}
+
+	/**
+	 * A blog directory has a numeric format, yyyymmdd. We consider a dir
+	 * a blog dir if the parts are numeric and reasonable.
+	 */
+	static private boolean isBlogDirectory(File file) {
+		String name = file.getName();
+		if(name.length() != 8)
+			return false;
+
+		int year;
+		try {
+			year = Integer.parseInt(name.substring(0, 4));
+		} catch(Exception x) {
+			return false;
+		}
+
+		int month;
+		try {
+			month = Integer.parseInt(name.substring(4, 6));
+		} catch(Exception x) {
+			return false;
+		}
+
+		int day;
+		try {
+			day = Integer.parseInt(name.substring(6, 8));
+		} catch(Exception x) {
+			return false;
+		}
+
+		return year >= 2024
+			&& year < 2100
+			&& month >= 1
+			&& month <= 12
+			&& day >= 1
+			&& day <= 31;
 	}
 
 	private ContentFileType getType(File file) {

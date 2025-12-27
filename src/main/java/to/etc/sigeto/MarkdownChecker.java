@@ -3,6 +3,7 @@ package to.etc.sigeto;
 import com.vladsch.flexmark.ast.Heading;
 import com.vladsch.flexmark.ast.Image;
 import com.vladsch.flexmark.ast.Link;
+import com.vladsch.flexmark.ast.Text;
 import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.ext.emoji.EmojiImageType;
 import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughSubscriptExtension;
@@ -16,6 +17,7 @@ import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
 import com.vladsch.flexmark.util.misc.Pair;
+import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.Yaml;
@@ -29,7 +31,9 @@ import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -73,6 +77,8 @@ public class MarkdownChecker {
 		m_renderer = HtmlRenderer.builder(options).build();
 	}
 
+	private boolean m_debug;
+
 	/**
 	 * Render the actual content.
 	 */
@@ -83,12 +89,67 @@ public class MarkdownChecker {
 		Pair<Document, String> result = parse(item.getFile());
 		Document doc = result.getFirst();
 
+		m_debug = item.getType() == ContentType.Blog;
+
 		//walkNode(doc, node -> {
 		//	rewriteNode(node);
 		//});
+		replaceContentHolders(item, doc);
+
 		if(m_currentItem.getName().startsWith("hp-16702"))
 			System.out.println();
 		return m_renderer.render(doc);
+	}
+
+	private void replaceContentHolders(ContentItem item, Node nd) {
+		if(nd instanceof Text t) {
+			BasedSequence chars = t.getChars();
+			String s = chars.toString();
+			if(s.contains("{{blog")) {
+				insertBlobHere(item, nd.getParent());
+				return;
+			}
+
+			if(m_debug) {
+				System.out.println("text");
+			}
+		}
+
+		Node fc = nd.getFirstChild();
+		while(null != fc) {
+			replaceContentHolders(item, fc);
+			fc = fc.getNext();
+		}
+	}
+
+	private void insertBlobHere(ContentItem item, Node nd) {
+		List<ContentLevel> bll = new ArrayList<>(item.getLevel().getBlogEntryList());
+		if(bll.isEmpty()) {
+			nd.unlink();
+			return;
+		}
+
+		bll.sort(Comparator.comparing(ContentLevel::getName).reversed());
+
+		//-- Sort all blog items
+		Node curr = nd;
+		for(ContentLevel level : bll) {
+			ContentItem rootItem = level.getRootItem();
+
+			curr = appendBlogEntry(curr, rootItem);
+		}
+		//nd.unlink();
+	}
+
+	private Node appendBlogEntry(Node nd, ContentItem rootItem) {
+		BasedSequence bs = BasedSequence.of(rootItem.getPageTitle());
+		Heading hd = new Heading();
+		hd.setLevel(2);
+		nd.insertAfter(hd);
+		Text txt = new Text(bs);
+		hd.appendChild(txt);
+
+		return hd;
 	}
 
 	/**

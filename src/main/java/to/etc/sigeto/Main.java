@@ -72,14 +72,25 @@ public class Main {
 			}
 
 			//-- Scan all markdown files, and check them
+			List<ContentItem> blogItemList = new ArrayList<>();
 			List<ContentItem> markdownList = content.getItemList().stream()
 				.filter(a -> a.getFileType() == ContentFileType.Markdown)
 				.collect(Collectors.toList());
+			int mdFiles = 0;
+			int blogFiles = 0;
 			MarkdownChecker mc = new MarkdownChecker(content);
 			List<Message> errorList = new ArrayList<>();
 			for(ContentItem item : markdownList) {
 				mc.scanContent(errorList, item);
+				if(item.getType() == ContentType.Page) {
+					mdFiles++;
+				} else if(item.getType() == ContentType.Blog) {
+					blogFiles++;
+					blogItemList.add(item);
+				}
 			}
+			System.out.println("Found " + mdFiles + " pages and " + blogFiles + " blog items");
+
 			if(!errorList.isEmpty()) {
 				for(Message message : errorList) {
 					System.err.println(message);
