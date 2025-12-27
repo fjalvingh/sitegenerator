@@ -1,30 +1,20 @@
 package to.etc.sigeto;
 
-import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.ast.Image;
-import com.vladsch.flexmark.ast.Link;
-import com.vladsch.flexmark.ast.Text;
-import com.vladsch.flexmark.ext.emoji.EmojiExtension;
-import com.vladsch.flexmark.ext.emoji.EmojiImageType;
-import com.vladsch.flexmark.ext.gfm.strikethrough.StrikethroughSubscriptExtension;
-import com.vladsch.flexmark.ext.superscript.SuperscriptExtension;
-import com.vladsch.flexmark.ext.tables.TablesExtension;
-import com.vladsch.flexmark.ext.toc.TocExtension;
-import com.vladsch.flexmark.ext.typographic.TypographicExtension;
-import com.vladsch.flexmark.html.HtmlRenderer;
-import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.util.ast.Document;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.util.data.MutableDataSet;
-import com.vladsch.flexmark.util.misc.Pair;
-import com.vladsch.flexmark.util.sequence.BasedSequence;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.commonmark.Extension;
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
+import org.commonmark.node.Heading;
+import org.commonmark.node.Image;
+import org.commonmark.node.Link;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
+import org.commonmark.renderer.text.TextContentRenderer;
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.yaml.snakeyaml.Yaml;
-import to.etc.sigeto.MdImageRewriter.MdFixImgExtension;
-import to.etc.sigeto.MdToGeneratedLinkResolver.MdLinkToGeneratedLinkExtension;
+import to.etc.sigeto.tables.MyTablesExtension;
+import to.etc.sigeto.utils.Pair;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
@@ -32,49 +22,59 @@ import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 public class MarkdownChecker {
-	private final @NotNull Parser m_parser;
+	@NonNull
+	private final Parser m_parser;
 
 	private final Content m_content;
 
-	private final @NotNull HtmlRenderer m_renderer;
+	private final List<Extension> m_extList;
+
+	//@NonNull
+	//private final HtmlRenderer m_renderer;
 
 	private ContentItem m_currentItem;
 
 	private List<Message> m_errorList;
 
-	private Dimension m_maxImageSize = new Dimension(900, 900);
-
 	private final Yaml m_yaml = new Yaml();
+
+	private TextContentRenderer m_textRenderer = new TextContentRenderer.Builder().build();
 
 	public MarkdownChecker(Content content) {
 		m_content = content;
-		MutableDataSet options = new MutableDataSet();
-		options.set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_ONLY);
-		options.set(TablesExtension.CLASS_NAME, "ui-tbl");
+		//MutableDataSet options = new MutableDataSet();
+		//options.set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_ONLY);
+		//options.set(TablesExtension.CLASS_NAME, "ui-tbl");
 
 		//-- Set this if we want h1 levels to be shown in the toc too. Usually h1 is the document title.
 		//options.set(TocExtension.LEVELS, 0x1e);
 
-		options.set(Parser.EXTENSIONS, Arrays.asList(
-			TablesExtension.create(),
-			EmojiExtension.create(),
-			TypographicExtension.create(),
-			MdLinkToGeneratedLinkExtension.create(),
-			MdFixImgExtension.create(this),
-			TocExtension.create(),
-			SuperscriptExtension.create(),
-			//SubscriptExtension.create()
-			StrikethroughSubscriptExtension.create()
-		));
-		m_parser = Parser.builder(options).build();
-		m_renderer = HtmlRenderer.builder(options).build();
+		//options.set(Parser.EXTENSIONS, Arrays.asList(
+		//	TablesExtension.create(),
+		//	EmojiExtension.create(),
+		//	TypographicExtension.create(),
+		//	MdLinkToGeneratedLinkExtension.create(),
+		//	MdFixImgExtension.create(this),
+		//	TocExtension.create(),
+		//	SuperscriptExtension.create(),
+		//	//SubscriptExtension.create()
+		//	StrikethroughSubscriptExtension.create()
+		//));
+
+		m_extList = List.of(
+			MyTablesExtension.create(),
+			StrikethroughExtension.create()
+		);
+
+		m_parser = Parser.builder()
+			.extensions(m_extList)
+			.build();
 	}
 
 	private boolean m_debug;
@@ -86,41 +86,48 @@ public class MarkdownChecker {
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		m_currentItem = item;
-		Pair<Document, String> result = parse(item.getFile());
-		Document doc = result.getFirst();
+		Pair<Node, String> result = parse(item.getFile());
+		Node doc = result.getFirst();
+
+		doc.accept(new LinkUpdater());
 
 		m_debug = item.getType() == ContentType.Blog;
 
 		//walkNode(doc, node -> {
 		//	rewriteNode(node);
 		//});
-		replaceContentHolders(item, doc);
+		//replaceContentHolders(item, doc);
 
 		if(m_currentItem.getName().startsWith("hp-16702"))
 			System.out.println();
-		return m_renderer.render(doc);
+
+		HtmlRenderer renderer = HtmlRenderer.builder()
+			.extensions(m_extList)
+			.nodeRendererFactory(ctx -> new MdImgRenderer(m_content, item, ctx))
+			.build();
+		return renderer.render(doc);
 	}
 
-	private void replaceContentHolders(ContentItem item, Node nd) {
-		if(nd instanceof Text t) {
-			BasedSequence chars = t.getChars();
-			String s = chars.toString();
-			if(s.contains("{{blog")) {
-				insertBlobHere(item, nd.getParent());
-				return;
-			}
-
-			if(m_debug) {
-				System.out.println("text");
-			}
-		}
-
-		Node fc = nd.getFirstChild();
-		while(null != fc) {
-			replaceContentHolders(item, fc);
-			fc = fc.getNext();
-		}
-	}
+	//private void replaceContentHolders(ContentItem item, Node nd) {
+	//	if(nd instanceof Text t) {
+	//		BasedSequence chars = t.getChars();
+	//		String s = chars.toString();
+	//		if(s.contains("{{blog")) {
+	//			insertBlobHere(item, nd.getParent());
+	//			return;
+	//		}
+	//
+	//		if(m_debug) {
+	//			System.out.println("text");
+	//		}
+	//	}
+	//
+	//	Node fc = nd.getFirstChild();
+	//	while(null != fc) {
+	//		replaceContentHolders(item, fc);
+	//		fc = fc.getNext();
+	//	}
+	//}
 
 	private void insertBlobHere(ContentItem item, Node nd) {
 		List<ContentLevel> bll = new ArrayList<>(item.getLevel().getBlogEntryList());
@@ -142,14 +149,15 @@ public class MarkdownChecker {
 	}
 
 	private Node appendBlogEntry(Node nd, ContentItem rootItem) {
-		BasedSequence bs = BasedSequence.of(rootItem.getPageTitle());
-		Heading hd = new Heading();
-		hd.setLevel(2);
-		nd.insertAfter(hd);
-		Text txt = new Text(bs);
-		hd.appendChild(txt);
-
-		return hd;
+		//BasedSequence bs = BasedSequence.of(rootItem.getPageTitle());
+		//Heading hd = new Heading();
+		//hd.setLevel(2);
+		//nd.insertAfter(hd);
+		//Text txt = new Text(bs);
+		//hd.appendChild(txt);
+		//
+		//return hd;
+		return null;
 	}
 
 	/**
@@ -161,8 +169,8 @@ public class MarkdownChecker {
 		//System.out.println("Pre-parsing " + item.getRelativePath());
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
-		Pair<Document, String> result = parse(item.getFile());
-		Document doc = result.getFirst();
+		Pair<Node, String> result = parse(item.getFile());
+		Node doc = result.getFirst();
 		walkNode(doc, node -> {
 			checkNode(node);
 		});
@@ -211,7 +219,7 @@ public class MarkdownChecker {
 		inMarkdown,
 	}
 
-	private Pair<Document, String> parse(File file) throws Exception {
+	private Pair<Node, String> parse(File file) throws Exception {
 		StringBuilder yaml = new StringBuilder();
 		StringBuilder markdown = new StringBuilder();
 
@@ -254,7 +262,7 @@ public class MarkdownChecker {
 		}
 
 		//-- Parse frontmatter if present
-		Document doc = m_parser.parse(markdown.toString());
+		Node doc = m_parser.parse(markdown.toString());
 		return new Pair<>(doc, yaml.toString());
 	}
 
@@ -266,19 +274,21 @@ public class MarkdownChecker {
 			checkImage((Image) node);
 		} else if(node instanceof Heading) {
 			Heading heading = (Heading) node;
-			if(m_currentItem.getPageTitle() == null)
-				m_currentItem.setPageTitle(heading.getText().unescape());
+			if(m_currentItem.getPageTitle() == null) {
+				String hdr = m_textRenderer.render(heading);
+				m_currentItem.setPageTitle(hdr);
+			}
 		}
 	}
 
 	private void checkImage(Image image) {
-		String url = image.getUrl().unescape();
+		String url = image.getDestination();
 		if(!Content.isRelativePath(url))
 			return;
 
 		ContentItem item = findItemByURL(url);
 		if(null == item) {
-			m_errorList.add(new Message(m_currentItem, image.getLineNumber(), MsgType.Error, "Image link to unknown document: " + url));
+			m_errorList.add(new Message(m_currentItem, image.getSourceSpans(), MsgType.Error, "Image link to unknown document: " + url));
 			return;
 		}
 		m_currentItem.addUsedItem(item, url);
@@ -291,13 +301,13 @@ public class MarkdownChecker {
 	private void checkLink(Link link) {
 		if(m_currentItem.getName().startsWith("hp-16702"))
 			System.out.println();
-		String url = link.getUrl().unescape();
+		String url = link.getDestination();
 		if(!Content.isRelativePath(url))
 			return;
 
 		ContentItem item = findItemByURL(url);
 		if(null == item) {
-			m_errorList.add(new Message(m_currentItem, link.getLineNumber(), MsgType.Error, "Link to unknown document: " + url));
+			m_errorList.add(new Message(m_currentItem, link.getSourceSpans(), MsgType.Error, "Link to unknown document: " + url));
 			return;
 		}
 		m_currentItem.addUsedItem(item, url);
@@ -339,15 +349,11 @@ public class MarkdownChecker {
 	}
 
 	static void walkNode(Node node, Consumer<Node> nodeConsumer) {
-		var iterator = node.getChildIterator();
-		while(iterator.hasNext()) {
-			var child = iterator.next();
-			nodeConsumer.accept(child);
-			walkNode(child, nodeConsumer);
+		Node nd = node.getFirstChild();
+		while(nd != null) {
+			nodeConsumer.accept(nd);
+			walkNode(nd, nodeConsumer);
+			nd = nd.getNext();
 		}
-	}
-
-	public Dimension getMaxImageSize() {
-		return m_maxImageSize;
 	}
 }

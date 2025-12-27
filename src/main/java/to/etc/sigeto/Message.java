@@ -1,5 +1,9 @@
 package to.etc.sigeto;
 
+import org.commonmark.node.SourceSpan;
+
+import java.util.List;
+
 public class Message {
 	private final ContentItem m_file;
 
@@ -15,6 +19,19 @@ public class Message {
 		m_type = type;
 		m_message = message;
 	}
+
+	public Message(ContentItem file, List<SourceSpan> spl, MsgType type, String message) {
+		m_file = file;
+		if(spl == null || spl.isEmpty()) {
+			m_lineNumber = -1;
+		} else {
+			m_lineNumber = spl.get(0).getLineIndex();
+		}
+
+		m_type = type;
+		m_message = message;
+	}
+
 
 	public ContentItem getFile() {
 		return m_file;

@@ -70,7 +70,7 @@ public class Content {
 			sb.append(file.getName());
 			if(file.isFile()) {
 				String relative = sb.toString();
-				ContentItem ci = new ContentItem(level, file, type, getType(file), relative);
+				ContentItem ci = new ContentItem(this, level, file, type, getType(file), relative);
 				if(ci.getFileType() == ContentFileType.Markdown) {
 					m_markDownItemCount++;
 				}

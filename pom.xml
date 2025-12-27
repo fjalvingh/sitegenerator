@@ -69,10 +69,28 @@
 			<version>2.33</version>
 		</dependency>
 
+<!--		<dependency>-->
+<!--			<groupId>com.vladsch.flexmark</groupId>-->
+<!--			<artifactId>flexmark-all</artifactId>-->
+<!--			<version>0.64.8</version>-->
+<!--		</dependency>-->
+
 		<dependency>
-			<groupId>com.vladsch.flexmark</groupId>
-			<artifactId>flexmark-all</artifactId>
-			<version>0.64.8</version>
+			<groupId>org.commonmark</groupId>
+			<artifactId>commonmark</artifactId>
+			<version>0.27.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.commonmark</groupId>
+			<artifactId>commonmark-ext-gfm-tables</artifactId>
+			<version>0.27.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.commonmark</groupId>
+			<artifactId>commonmark-ext-gfm-strikethrough</artifactId>
+			<version>0.27.0</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/gg.jte/jte -->

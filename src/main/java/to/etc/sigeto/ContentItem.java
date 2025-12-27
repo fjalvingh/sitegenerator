@@ -1,8 +1,10 @@
 package to.etc.sigeto;
 
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,6 +23,8 @@ public class ContentItem {
 
 	private String m_pageTitle;
 
+	@NonNull private final Content m_content;
+
 	@NonNull
 	private ContentLevel m_level;
 
@@ -31,7 +35,8 @@ public class ContentItem {
 
 	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
 
-	public ContentItem(@NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
+	public ContentItem(@NonNull Content content, @NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
+		m_content = content;
 		m_level = level;
 		m_file = file;
 		m_name = file.getName();
@@ -42,6 +47,10 @@ public class ContentItem {
 	@NonNull
 	public ContentLevel getLevel() {
 		return m_level;
+	}
+
+	@NonNull public Content getContent() {
+		return m_content;
 	}
 
 	public void moveTo(@NonNull ContentLevel level, @NonNull String newName) {
@@ -88,6 +97,26 @@ public class ContentItem {
 			return getRelativePath();
 		}
 	}
+
+	@Nullable
+	public ContentItem findItemByURL(String url) {
+		if(!Content.isRelativePath(url))
+			return null;
+
+		String fullPath;
+		if(url.startsWith("/")) {
+			fullPath = url.substring(1);
+		} else {
+			//-- Relative wrt the parent
+			Path path = Path.of(getDirectoryPath());
+			Path resolvedPath = path.resolve(url).normalize();
+			fullPath = resolvedPath.toString();
+		}
+
+		ContentItem item = getContent().findItem(fullPath);
+		return item;
+	}
+
 
 	public String getDirectoryPath() {
 		return m_level.getRelativePath();

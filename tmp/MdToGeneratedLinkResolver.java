@@ -1,18 +1,9 @@
 package to.etc.sigeto;
 
-import com.vladsch.flexmark.ast.Link;
-import com.vladsch.flexmark.ext.wikilink.WikiImage;
-import com.vladsch.flexmark.ext.wikilink.WikiLink;
-import com.vladsch.flexmark.html.HtmlRenderer;
-import com.vladsch.flexmark.html.LinkResolver;
-import com.vladsch.flexmark.html.LinkResolverFactory;
-import com.vladsch.flexmark.html.renderer.LinkResolverBasicContext;
-import com.vladsch.flexmark.html.renderer.LinkStatus;
-import com.vladsch.flexmark.html.renderer.ResolvedLink;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.util.data.MutableDataHolder;
+import org.commonmark.node.Link;
+import org.commonmark.renderer.html.HtmlRenderer;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
-import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
 import java.util.Set;
@@ -71,7 +62,6 @@ public class MdToGeneratedLinkResolver implements LinkResolver {
 			return false;
 		}
 
-		@NotNull
 		@Override
 		public LinkResolver apply(@NotNull LinkResolverBasicContext context) {
 			return new MdToGeneratedLinkResolver(context);
@@ -85,7 +75,7 @@ public class MdToGeneratedLinkResolver implements LinkResolver {
 		}
 
 		@Override
-		public void extend(@NotNull HtmlRenderer.Builder htmlRendererBuilder, @NotNull String rendererType) {
+		public void extend(@NotNull HtmlRenderer.Builder htmlRendererBuilder, @NonNull String rendererType) {
 			htmlRendererBuilder.linkResolverFactory(new MdToGeneratedLinkResolver.Factory());
 			//htmlRendererBuilder.nodeRendererFactory(new CustomLinkRenderer.Factory());
 		}

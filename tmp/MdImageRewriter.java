@@ -1,16 +1,10 @@
 package to.etc.sigeto;
 
-import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.ast.Image;
-import com.vladsch.flexmark.html.HtmlRenderer;
-import com.vladsch.flexmark.html.HtmlWriter;
-import com.vladsch.flexmark.html.renderer.DelegatingNodeRendererFactory;
-import com.vladsch.flexmark.html.renderer.NodeRenderer;
-import com.vladsch.flexmark.html.renderer.NodeRendererContext;
-import com.vladsch.flexmark.html.renderer.NodeRenderingHandler;
-import com.vladsch.flexmark.util.data.DataHolder;
-import com.vladsch.flexmark.util.data.MutableDataHolder;
-import org.jetbrains.annotations.NotNull;
+import org.commonmark.node.Heading;
+import org.commonmark.renderer.NodeRenderer;
+import org.commonmark.renderer.html.HtmlRenderer;
+import org.commonmark.renderer.html.HtmlWriter;
+import org.eclipse.jdt.annotation.NonNull;
 import to.etc.sigeto.unidiot.WrappedException;
 
 import java.awt.*;
@@ -28,7 +22,7 @@ final public class MdImageRewriter implements NodeRenderer {
 	 * Make Heading nodes have an ID that is constructed from
 	 * the heading text.
 	 */
-	private void fixHeading(@NotNull Heading node, @NotNull NodeRendererContext context, @NotNull HtmlWriter html) {
+	private void fixHeading(@NonNull Heading node, @NonNull NodeRendererContext context, @NonNull HtmlWriter html) {
 		String unescape = node.getText().unescape();
 		int level = node.getLevel();
 		String id = calculateId(unescape);
@@ -59,7 +53,7 @@ final public class MdImageRewriter implements NodeRenderer {
 		return sb.toString();
 	}
 
-	private void fixImage(@NotNull Image node, @NotNull NodeRendererContext context, @NotNull HtmlWriter html) {
+	private void fixImage(@NonNull Image node, @NonNull NodeRendererContext context, @NonNull HtmlWriter html) {
 		try {
 			String url = node.getUrl().unescape();
 			if(Content.isRelativePath(url)) {
@@ -139,9 +133,9 @@ final public class MdImageRewriter implements NodeRenderer {
 			m_content = content;
 		}
 
-		@NotNull
+		@NonNull
 		@Override
-		public NodeRenderer apply(@NotNull DataHolder options) {
+		public NodeRenderer apply(@NonNull DataHolder options) {
 			return new MdImageRewriter(m_content);
 		}
 
@@ -162,12 +156,12 @@ final public class MdImageRewriter implements NodeRenderer {
 		}
 
 		@Override
-		public void rendererOptions(@NotNull MutableDataHolder options) {
+		public void rendererOptions(@NonNull MutableDataHolder options) {
 
 		}
 
 		@Override
-		public void extend(@NotNull HtmlRenderer.Builder htmlRendererBuilder, @NotNull String rendererType) {
+		public void extend(@NonNull HtmlRenderer.Builder htmlRendererBuilder, @NonNull String rendererType) {
 			//htmlRendererBuilder.linkResolverFactory(new Factory());
 			htmlRendererBuilder.nodeRendererFactory(new Factory(m_content));
 		}
