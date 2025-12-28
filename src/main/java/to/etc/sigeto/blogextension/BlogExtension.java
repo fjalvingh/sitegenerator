@@ -18,8 +18,6 @@ public class BlogExtension implements Parser.ParserExtension, HtmlRenderer.HtmlR
 		return new BlogExtension(null);
 	}
 
-
-
 	public static Extension create(ContentItem item) {
 		return new BlogExtension(item);
 	}

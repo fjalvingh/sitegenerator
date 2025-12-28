@@ -34,8 +34,6 @@ final public class BlogHtmlRenderer implements NodeRenderer {
 
 	@Override
 	public void render(Node node) {
-		BlogNode toc = (BlogNode) node;
-
 		List<ContentLevel> ble = m_item.getLevel().getBlogEntryList();
 		if(ble.isEmpty())
 			return;
