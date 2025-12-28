@@ -13,6 +13,7 @@ import org.commonmark.renderer.text.TextContentRenderer;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.yaml.snakeyaml.Yaml;
+import to.etc.sigeto.blogextension.BlogExtension;
 import to.etc.sigeto.emojis.EmojiExtension;
 import to.etc.sigeto.notifications.NotificationsExtension;
 import to.etc.sigeto.tables.MyTablesExtension;
@@ -26,7 +27,6 @@ import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -52,23 +52,10 @@ public class MarkdownChecker {
 
 	public MarkdownChecker(Content content) {
 		m_content = content;
-		//MutableDataSet options = new MutableDataSet();
-		//options.set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_ONLY);
-		//options.set(TablesExtension.CLASS_NAME, "ui-tbl");
-
-		//-- Set this if we want h1 levels to be shown in the toc too. Usually h1 is the document title.
-		//options.set(TocExtension.LEVELS, 0x1e);
-
 		//options.set(Parser.EXTENSIONS, Arrays.asList(
-		//	TablesExtension.create(),
-		//	EmojiExtension.create(),
 		//	TypographicExtension.create(),
-		//	MdLinkToGeneratedLinkExtension.create(),
-		//	MdFixImgExtension.create(this),
-		//	TocExtension.create(),
 		//	SuperscriptExtension.create(),
 		//	//SubscriptExtension.create()
-		//	StrikethroughSubscriptExtension.create()
 		//));
 
 		m_extList = List.of(
@@ -80,8 +67,10 @@ public class MarkdownChecker {
 			EmojiExtension.create()
 		);
 
+		List<Extension> extList = new ArrayList<>(m_extList);
+		extList.add(BlogExtension.create());
 		m_parser = Parser.builder()
-			.extensions(m_extList)
+			.extensions(extList)
 			.build();
 	}
 
@@ -101,71 +90,16 @@ public class MarkdownChecker {
 
 		m_debug = item.getType() == ContentType.Blog;
 
-		//walkNode(doc, node -> {
-		//	rewriteNode(node);
-		//});
-		//replaceContentHolders(item, doc);
+		//if(m_currentItem.getName().startsWith("hp-16702"))
+		//	System.out.println();
 
-		if(m_currentItem.getName().startsWith("hp-16702"))
-			System.out.println();
-
+		List<Extension> extList = new ArrayList<>(m_extList);
+		extList.add(BlogExtension.create(item));
 		HtmlRenderer renderer = HtmlRenderer.builder()
-			.extensions(m_extList)
+			.extensions(extList)
 			.nodeRendererFactory(ctx -> new MdImgRenderer(m_content, item, ctx))
 			.build();
 		return renderer.render(doc);
-	}
-
-	//private void replaceContentHolders(ContentItem item, Node nd) {
-	//	if(nd instanceof Text t) {
-	//		BasedSequence chars = t.getChars();
-	//		String s = chars.toString();
-	//		if(s.contains("{{blog")) {
-	//			insertBlobHere(item, nd.getParent());
-	//			return;
-	//		}
-	//
-	//		if(m_debug) {
-	//			System.out.println("text");
-	//		}
-	//	}
-	//
-	//	Node fc = nd.getFirstChild();
-	//	while(null != fc) {
-	//		replaceContentHolders(item, fc);
-	//		fc = fc.getNext();
-	//	}
-	//}
-
-	private void insertBlobHere(ContentItem item, Node nd) {
-		List<ContentLevel> bll = new ArrayList<>(item.getLevel().getBlogEntryList());
-		if(bll.isEmpty()) {
-			nd.unlink();
-			return;
-		}
-
-		bll.sort(Comparator.comparing(ContentLevel::getName).reversed());
-
-		//-- Sort all blog items
-		Node curr = nd;
-		for(ContentLevel level : bll) {
-			ContentItem rootItem = level.getRootItem();
-
-			curr = appendBlogEntry(curr, rootItem);
-		}
-		//nd.unlink();
-	}
-
-	private Node appendBlogEntry(Node nd, ContentItem rootItem) {
-		//BasedSequence bs = BasedSequence.of(rootItem.getPageTitle());
-		//Heading hd = new Heading();
-		//hd.setLevel(2);
-		//nd.insertAfter(hd);
-		//Text txt = new Text(bs);
-		//hd.appendChild(txt);
-		//
-		//return hd;
-		return null;
 	}
 
 	/**

@@ -7,6 +7,9 @@ import org.commonmark.node.Text;
 import org.commonmark.parser.delimiter.DelimiterProcessor;
 import org.commonmark.parser.delimiter.DelimiterRun;
 
+/**
+ * Recognize :emoji: format.
+ */
 public class EmojiDelimiterProcessor implements DelimiterProcessor {
 	@Override public char getOpeningCharacter() {
 		return ':';

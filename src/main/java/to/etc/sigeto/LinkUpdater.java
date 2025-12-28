@@ -14,7 +14,7 @@ final public class LinkUpdater extends AbstractVisitor {
 		link.setDestination(fixLink(url));
 	}
 
-	private String fixLink(String url) {
+	static public String fixLink(String url) {
 		String lcurl = url.toLowerCase();
 		if(lcurl.startsWith("http:") || lcurl.startsWith("https:")) {
 			return url;
