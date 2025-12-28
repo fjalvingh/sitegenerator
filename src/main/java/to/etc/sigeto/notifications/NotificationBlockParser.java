@@ -19,8 +19,8 @@ public class NotificationBlockParser extends AbstractBlockParser {
 	private Notification m_type;
 
 	public NotificationBlockParser(Notification type) {
-		this.m_type = type;
-		this.m_block = new NotificationBlock(type);
+		m_type = type;
+		m_block = new NotificationBlock(type);
 	}
 
 	@Override

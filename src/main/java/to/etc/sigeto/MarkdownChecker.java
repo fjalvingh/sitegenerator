@@ -13,6 +13,7 @@ import org.commonmark.renderer.text.TextContentRenderer;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.yaml.snakeyaml.Yaml;
+import to.etc.sigeto.emojis.EmojiExtension;
 import to.etc.sigeto.notifications.NotificationsExtension;
 import to.etc.sigeto.tables.MyTablesExtension;
 import to.etc.sigeto.tocextension.TocExtension;
@@ -75,7 +76,8 @@ public class MarkdownChecker {
 			StrikethroughExtension.create(),
 			TocExtension.create(),
 			HeadingAnchorExtension.create(),
-			NotificationsExtension.create()
+			NotificationsExtension.create(),
+			EmojiExtension.create()
 		);
 
 		m_parser = Parser.builder()
