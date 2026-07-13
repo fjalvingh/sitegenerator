@@ -5,6 +5,7 @@ import org.eclipse.jdt.annotation.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -34,6 +35,12 @@ public class ContentItem {
 	private final Map<String, Object> m_frontMatter = new HashMap<>();
 
 	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
+
+	@Nullable
+	private LocalDate m_createdDate;
+
+	@Nullable
+	private LocalDate m_modifiedDate;
 
 	public ContentItem(@NonNull Content content, @NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
 		m_content = content;
@@ -151,6 +158,38 @@ public class ContentItem {
 
 	public void setFrontMatter(Map<String, Object> map) {
 		m_frontMatter.putAll(map);
+	}
+
+	/**
+	 * The date this file was first added, taken from its git history if the
+	 * file is inside a git repository, else the file's own last-modified date.
+	 */
+	@NonNull
+	public LocalDate getCreatedDate() {
+		resolveDates();
+		LocalDate date = m_createdDate;
+		assert date != null;
+		return date;
+	}
+
+	/**
+	 * The date this file was last changed, taken from its git history if the
+	 * file is inside a git repository, else the file's own last-modified date.
+	 */
+	@NonNull
+	public LocalDate getModifiedDate() {
+		resolveDates();
+		LocalDate date = m_modifiedDate;
+		assert date != null;
+		return date;
+	}
+
+	private void resolveDates() {
+		if(null == m_createdDate) {
+			GitDateUtil.DateInfo info = GitDateUtil.getDates(m_file);
+			m_createdDate = info.created;
+			m_modifiedDate = info.modified;
+		}
 	}
 
 	public Map<String, Object> getFrontMatter() {

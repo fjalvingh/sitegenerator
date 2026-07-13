@@ -2,10 +2,13 @@ package to.etc.sigeto;
 
 import org.eclipse.jdt.annotation.Nullable;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PageModel {
+	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+
 	private final Content m_siteContent;
 
 	private final String m_content;
@@ -72,6 +75,14 @@ public class PageModel {
 
 	public String getTitle() {
 		return m_item.getPageTitle() == null ? "Content page" : m_item.getPageTitle();
+	}
+
+	public String getCreatedDateText() {
+		return DATE_FORMAT.format(m_item.getCreatedDate());
+	}
+
+	public String getModifiedDateText() {
+		return DATE_FORMAT.format(m_item.getModifiedDate());
 	}
 
 	public Menu getMenu() {
