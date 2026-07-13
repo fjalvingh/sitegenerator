@@ -1,5 +1,6 @@
 package to.etc.sigeto;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -27,16 +28,16 @@ final public class MenuItem {
 	@Nullable
 	private MenuItem m_parent;
 
-	public MenuItem(@Nullable MenuItem parent, ContentLevel level, ContentItem item, String title, String sortTitle, int itemLevel) {
+	public MenuItem(@Nullable MenuItem parent, @NonNull ContentLevel level, @NonNull ContentItem item, @NonNull String title, @NonNull String sortTitle, int itemLevel) {
+		if(level == null || item == null || title == null || sortTitle == null) {
+			throw new MessageException("Menu item cannot be created for " + level + ": missing level, item or title (probably a content directory without an index markdown file)");
+		}
 		m_parent = parent;
 		m_level = level;
 		m_item = item;
 		m_title = title;
 		m_sortTitle = sortTitle;
 		m_itemLevel = itemLevel;
-		if(level == null || item == null || title == null || sortTitle == null) {
-			throw new IllegalArgumentException("Arguments cannot be null");
-		}
 	}
 
 	public ContentItem getItem() {

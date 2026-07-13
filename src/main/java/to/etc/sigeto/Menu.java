@@ -41,7 +41,7 @@ public class Menu {
 			if(subLevel.hasMarkdown()) {
 				ContentItem item = subLevel.getRootItem();
 				if(item == null) {
-					throw new IllegalStateException("No item in sublevel " + subLevel.getRelativePath());
+					throw new MessageException("No item in sublevel " + subLevel.getRelativePath());
 				}
 				subItems.remove(item);
 				createItemIf(rootItem, item, subLevel);
@@ -70,7 +70,7 @@ public class Menu {
 		Map<String, Object> options;
 		if(o != null) {
 			if(! (o instanceof Map)) {
-				throw new IllegalStateException(item.getRelativePath() + ": frontmatter 'menu' item should be a map");
+				throw new MessageException(item.getRelativePath() + ": frontmatter 'menu' item should be a map");
 			}
 			options = (Map<String, Object>) o;
 

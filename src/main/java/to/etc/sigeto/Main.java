@@ -53,7 +53,7 @@ public class Main {
 				outputRoot.mkdirs();
 			}
 			if(!outputRoot.exists()) {
-				throw new MessageException("Output root does not exist and cannot be created at " + m_outputRoot);
+				throw new MessageException("Output root does not exist and cannot be created at " + outputRoot);
 			}
 			File templateRoot = new File(m_inputRoot, "templates");
 			if(!templateRoot.exists() || !templateRoot.isDirectory()) {
@@ -87,6 +87,7 @@ public class Main {
 				} else if(item.getType() == ContentType.Blog) {
 					blogFiles++;
 					blogItemList.add(item);
+					System.out.println("blog>> " + item.getRelativePath());
 				}
 			}
 			System.out.println("Found " + mdFiles + " pages and " + blogFiles + " blog items");

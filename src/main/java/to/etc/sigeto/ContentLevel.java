@@ -23,6 +23,7 @@ final public class ContentLevel {
 
 	private final List<ContentLevel> m_blogEntryList = new ArrayList<>();
 
+	@Nullable
 	private ContentItem m_rootItem;
 
 	@Nullable
@@ -67,6 +68,7 @@ final public class ContentLevel {
 		return m_subItems;
 	}
 
+	@Nullable
 	public ContentItem getRootItem() {
 		return m_rootItem;
 	}

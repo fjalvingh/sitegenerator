@@ -11,7 +11,6 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.commonmark.renderer.text.TextContentRenderer;
 import org.eclipse.jdt.annotation.NonNull;
-import org.eclipse.jdt.annotation.Nullable;
 import org.yaml.snakeyaml.Yaml;
 import to.etc.sigeto.blogextension.BlogExtension;
 import to.etc.sigeto.emojis.EmojiExtension;
@@ -25,7 +24,6 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -224,16 +222,7 @@ public class MarkdownChecker {
 	}
 
 	private void checkImage(Image image) {
-		String url = image.getDestination();
-		if(!Content.isRelativePath(url))
-			return;
-
-		ContentItem item = findItemByURL(url);
-		if(null == item) {
-			m_errorList.add(new Message(m_currentItem, image.getSourceSpans(), MsgType.Error, "Image link to unknown document: " + url));
-			return;
-		}
-		m_currentItem.addUsedItem(item, url);
+		checkReference(image, image.getDestination(), "Image");
 	}
 
 	/**
@@ -241,37 +230,19 @@ public class MarkdownChecker {
 	 * replace it with a html link to the generated page.
 	 */
 	private void checkLink(Link link) {
-		if(m_currentItem.getName().startsWith("hp-16702"))
-			System.out.println();
-		String url = link.getDestination();
+		checkReference(link, link.getDestination(), "Link");
+	}
+
+	private void checkReference(Node node, String url, String kind) {
 		if(!Content.isRelativePath(url))
 			return;
 
-		ContentItem item = findItemByURL(url);
+		ContentItem item = m_currentItem.findItemByURL(url);
 		if(null == item) {
-			m_errorList.add(new Message(m_currentItem, link.getSourceSpans(), MsgType.Error, "Link to unknown document: " + url));
+			m_errorList.add(new Message(m_currentItem, node.getSourceSpans(), MsgType.Error, kind + " link to unknown document: " + url));
 			return;
 		}
 		m_currentItem.addUsedItem(item, url);
-	}
-
-	@Nullable
-	public ContentItem findItemByURL(String url) {
-		if(!Content.isRelativePath(url))
-			return null;
-
-		String fullPath;
-		if(url.startsWith("/")) {
-			fullPath = url.substring(1);
-		} else {
-			//-- Relative wrt the parent
-			Path path = Path.of(m_currentItem.getDirectoryPath());
-			Path resolvedPath = path.resolve(url).normalize();
-			fullPath = resolvedPath.toString();
-		}
-
-		ContentItem item = m_content.findItem(fullPath);
-		return item;
 	}
 
 	/**

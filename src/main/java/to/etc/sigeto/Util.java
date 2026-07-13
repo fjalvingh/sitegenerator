@@ -10,7 +10,6 @@ import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.LineNumberReader;
@@ -30,7 +29,7 @@ public class Util {
 	static public final long GB = 1024L * MB;
 
 	/**
-	 * Read a file's contents in a string using the default encoding of the platform.
+	 * Read a file's contents in a string, decoded as UTF-8.
 	 */
 	static public String readFileAsString(final File f) throws Exception {
 		StringBuilder sb = new StringBuilder((int) f.length() + 20);
@@ -39,7 +38,7 @@ public class Util {
 	}
 
 	static public void readFileAsString(final Appendable o, final File f) throws Exception {
-		try(LineNumberReader lr = new LineNumberReader(new FileReader(f))) {
+		try(LineNumberReader lr = new LineNumberReader(Files.newBufferedReader(f.toPath(), StandardCharsets.UTF_8))) {
 			String line;
 			while(null != (line = lr.readLine())) {
 				o.append(line);
@@ -68,9 +67,14 @@ public class Util {
 	}
 
 	static public void copyFile(@NonNull File destf, @NonNull File srcf, long maxSize) throws IOException {
-		try(InputStream is = new FileInputStream(srcf); OutputStream os = new FileOutputStream(destf)) {
-			copyFile(os, is, maxSize);
+		try {
+			try(InputStream is = new FileInputStream(srcf); OutputStream os = new FileOutputStream(destf)) {
+				copyFile(os, is, maxSize);
+			}
 			ignore(destf.setLastModified(srcf.lastModified()));
+		} catch(IOException x) {
+			delete(destf);                                    // Clean up partial/truncated output
+			throw x;
 		}
 	}
 
@@ -185,15 +189,14 @@ public class Util {
 		if(ar == null)
 			return true;
 
-		for(int i = 0; i < ar.length; i++) {
-			String name = ar[i].getName();
+		for(File file : ar) {
+			String name = file.getName();
 			if(!name.equals(".") && !name.equals("..")) {
-				try {
-					if(ar[i].isDirectory())
-						dirEmpty(ar[i]);
-					if(!ar[i].delete())
-						throw new IOException("Delete failed?");
-				} catch(IOException x) {
+				if(file.isDirectory() && !dirEmpty(file)) {
+					hase = true;
+					continue;                              // Do not attempt to delete a non-empty directory
+				}
+				if(!file.delete()) {
 					hase = true;
 				}
 			}
