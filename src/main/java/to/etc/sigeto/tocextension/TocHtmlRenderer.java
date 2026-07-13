@@ -2,10 +2,8 @@ package to.etc.sigeto.tocextension;
 
 import org.commonmark.ext.heading.anchor.IdGenerator;
 import org.commonmark.node.AbstractVisitor;
-import org.commonmark.node.Code;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Node;
-import org.commonmark.node.Text;
 import org.commonmark.renderer.NodeRenderer;
 import org.commonmark.renderer.html.HtmlNodeRendererContext;
 import org.commonmark.renderer.html.HtmlWriter;
@@ -97,7 +95,7 @@ final public class TocHtmlRenderer implements NodeRenderer {
 		//System.out.println(sb.toString());
 
 		m_htmlWriter.tag("li", Map.of());
-		m_htmlWriter.tag("a", Map.of("href", "#" + headerName(level.getHeading())));
+		m_htmlWriter.tag("a", Map.of("href", "#" + headerName(render)));
 		m_htmlWriter.text(render);
 		m_htmlWriter.tag("/a");
 		m_htmlWriter.tag("/li");
@@ -106,23 +104,9 @@ final public class TocHtmlRenderer implements NodeRenderer {
 
 	private IdGenerator m_idGenerator = new IdGenerator.Builder().build();
 
-	private String headerName(Heading heading) {
-		//-- Concatenate texts
-		StringBuilder sb = new StringBuilder();
-		heading.accept(new AbstractVisitor() {
-			@Override
-			public void visit(Text text) {
-				sb.append(text.getLiteral());
-			}
-
-			@Override
-			public void visit(Code code) {
-				sb.append(code.getLiteral());
-			}
-		});
-		String str = sb.toString().trim().toLowerCase();
-		String id = m_idGenerator.generateId(str);
-		return id;
+	private String headerName(String renderedText) {
+		String str = renderedText.trim().toLowerCase();
+		return m_idGenerator.generateId(str);
 	}
 
 	private class Hdr {

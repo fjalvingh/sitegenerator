@@ -99,7 +99,7 @@ public class Content {
 			System.out.println("No index page found for directory " + level);
 		}
 
-		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() ? null : level;
+		return level.getSubItems().isEmpty() && level.getSubLevelList().isEmpty() && level.getBlogEntryList().isEmpty() ? null : level;
 	}
 
 	/**

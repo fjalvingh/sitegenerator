@@ -50,11 +50,6 @@ public class PageModel {
 		return m_item == item.getItem();
 	}
 
-	public boolean containsCurrentItem(MenuItem item) {
-		ContentLevel menuLevel = item.getLevel();				// The level for the menu
-		return menuLevel.isInside(item.getLevel());
-	}
-
 	public boolean mustShowItem(MenuItem menu) {
 		//if(m_item.getRelativePath().startsWith("index/pdp-11"))
 		//	System.out.println();
