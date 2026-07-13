@@ -5,6 +5,7 @@ import org.eclipse.jdt.annotation.Nullable;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +31,9 @@ public class Content {
 
 	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
 
+	/** All blog entries in the whole content tree, sorted ascending by blog date - the sitewide global timeline. */
+	private List<ContentLevel> m_allBlogEntries = new ArrayList<>();
+
 	public static Content create(File root) {
 		Content content = new Content();
 		content.initialize(root);
@@ -47,6 +51,60 @@ public class Content {
 	public void complete() {
 		//-- Create the site menu
 		m_menu = Menu.create(this);
+
+		//-- Build the sitewide global blog timeline
+		List<ContentLevel> allBlogs = new ArrayList<>();
+		collectBlogEntries(m_pageRootLevel, allBlogs);
+		allBlogs.sort(Comparator.comparing(ContentLevel::getBlogDate));
+		m_allBlogEntries = allBlogs;
+	}
+
+	private static void collectBlogEntries(ContentLevel level, List<ContentLevel> out) {
+		out.addAll(level.getBlogEntryList());
+		for(ContentLevel sub : level.getSubLevelList()) {
+			collectBlogEntries(sub, out);
+		}
+	}
+
+	/**
+	 * All blog entries in the whole content tree, sorted ascending by blog date.
+	 */
+	public List<ContentLevel> getAllBlogEntries() {
+		return m_allBlogEntries;
+	}
+
+	@Nullable
+	public ContentLevel getPreviousGlobalBlog(ContentLevel entry) {
+		int idx = m_allBlogEntries.indexOf(entry);
+		return idx <= 0 ? null : m_allBlogEntries.get(idx - 1);
+	}
+
+	@Nullable
+	public ContentLevel getNextGlobalBlog(ContentLevel entry) {
+		int idx = m_allBlogEntries.indexOf(entry);
+		return idx == -1 || idx == m_allBlogEntries.size() - 1 ? null : m_allBlogEntries.get(idx + 1);
+	}
+
+	@Nullable
+	public static ContentLevel getPreviousLocalBlog(ContentLevel entry) {
+		ContentLevel parent = entry.getParentLevel();
+		if(null == parent)
+			return null;
+		List<ContentLevel> list = new ArrayList<>(parent.getBlogEntryList());
+		list.sort(Comparator.comparing(ContentLevel::getBlogDate));
+		int idx = list.indexOf(entry);
+		return idx <= 0 ? null : list.get(idx - 1);
+	}
+
+	@Nullable
+	public static ContentLevel getNextLocalBlog(ContentLevel entry) {
+		ContentLevel parent = entry.getParentLevel();
+		if(null == parent)
+			return null;
+		List<ContentLevel> list = new ArrayList<>(parent.getBlogEntryList());
+		list.sort(Comparator.comparing(ContentLevel::getBlogDate));
+		int idx = list.indexOf(entry);
+		return idx == -1 || idx == list.size() - 1 ? null : list.get(idx + 1);
 	}
 
 	@Nullable
@@ -54,10 +112,6 @@ public class Content {
 		int len = sb.length();
 		String levelPath = sb.toString();
 		ContentLevel level = new ContentLevel(root, levelPath, type, parentLevel);
-		//if(root.getName().equalsIgnoreCase("blogs") && m_blogRootLevel == null) {
-		//	type = ContentType.Blog;
-		//	m_blogRootLevel = level;
-		//}
 
 		File[] files = root.listFiles();
 		if(null == files || files.length == 0) {

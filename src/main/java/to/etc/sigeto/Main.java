@@ -5,6 +5,7 @@ import gg.jte.TemplateEngine;
 import gg.jte.TemplateOutput;
 import gg.jte.output.StringOutput;
 import gg.jte.resolve.DirectoryCodeResolver;
+import org.eclipse.jdt.annotation.Nullable;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -72,7 +73,6 @@ public class Main {
 			}
 
 			//-- Scan all markdown files, and check them
-			List<ContentItem> blogItemList = new ArrayList<>();
 			List<ContentItem> markdownList = content.getItemList().stream()
 				.filter(a -> a.getFileType() == ContentFileType.Markdown)
 				.collect(Collectors.toList());
@@ -86,7 +86,6 @@ public class Main {
 					mdFiles++;
 				} else if(item.getType() == ContentType.Blog) {
 					blogFiles++;
-					blogItemList.add(item);
 					System.out.println("blog>> " + item.getRelativePath());
 				}
 			}
@@ -106,6 +105,13 @@ public class Main {
 			Util.dirEmpty(outputRoot);
 			for(ContentItem item : content.getItemList()) {
 				renderItem(outputRoot, templateEngine, mc, item, content);
+			}
+
+			//-- Render the sitewide global timeline copy of every story-nested blog entry
+			for(ContentLevel blog : content.getAllBlogEntries()) {
+				if(!blog.isGlobalBlogRoot()) {
+					renderGlobalBlogMirror(outputRoot, templateEngine, mc, blog, content);
+				}
 			}
 
 			//-- Copy theme data
@@ -152,12 +158,39 @@ public class Main {
 	}
 
 	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
-		String render = mc.renderContent(item);
-		String relativePath = item.getRelativePath();
-		int pos = relativePath.lastIndexOf(".");
-		if(pos == -1)
-			throw new IllegalStateException("?? No .md extension");
-		String newPath = relativePath.substring(0, pos) + ".html";
+		String outputDir = item.getDirectoryPath();
+		String render = mc.renderContent(item, outputDir);
+		String newPath = item.getRelativeTargetPath();
+
+		BlogNav nav = BlogNav.NONE;
+		if(item.getType() == ContentType.Blog) {
+			ContentLevel level = item.getLevel();
+			nav = level.isGlobalBlogRoot()
+				? BlogNav.global(content, level, outputDir)
+				: BlogNav.local(level, outputDir);
+		}
+
+		writePage(outputRoot, templateEngine, mc, content, item, render, newPath, nav);
+	}
+
+	/**
+	 * Render a story-nested blog entry a second time, into the sitewide global
+	 * blog timeline namespace, with prev/next navigating the whole site's
+	 * chronological blog list rather than just this entry's story.
+	 */
+	private static void renderGlobalBlogMirror(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentLevel blog, Content content) throws Exception {
+		ContentItem item = blog.getRootItem();
+		if(null == item)
+			return;
+		String outputDir = "blog-timeline/" + item.getDirectoryPath();
+		String render = mc.renderContent(item, outputDir);
+		String newPath = "blog-timeline/" + item.getRelativeTargetPath();
+
+		BlogNav nav = BlogNav.global(content, blog, outputDir);
+		writePage(outputRoot, templateEngine, mc, content, item, render, newPath, nav);
+	}
+
+	private static void writePage(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, Content content, ContentItem item, String render, String newPath, BlogNav nav) throws Exception {
 		File out = new File(outputRoot, newPath);
 		File parentFile = out.getParentFile();
 		if(null != parentFile) {
@@ -165,10 +198,77 @@ public class Main {
 		}
 
 		TemplateOutput output = new StringOutput(65536);
-		PageModel pm = new PageModel(content, render, mc, item);
+		PageModel pm = new PageModel(content, render, mc, item, nav.previousHref, nav.previousTitle, nav.nextHref, nav.nextTitle);
 		templateEngine.render("base.jte", pm, output);
 
 		Util.writeFileFromString(out, output.toString(), StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * Resolved, already-relative prev/next navigation for a blog entry render.
+	 */
+	private static final class BlogNav {
+		static final BlogNav NONE = new BlogNav(null, null, null, null);
+
+		@Nullable final String previousHref;
+
+		@Nullable final String previousTitle;
+
+		@Nullable final String nextHref;
+
+		@Nullable final String nextTitle;
+
+		BlogNav(@Nullable String previousHref, @Nullable String previousTitle, @Nullable String nextHref, @Nullable String nextTitle) {
+			this.previousHref = previousHref;
+			this.previousTitle = previousTitle;
+			this.nextHref = nextHref;
+			this.nextTitle = nextTitle;
+		}
+
+		/**
+		 * Nav scoped to the blog entries directly nested under the same parent (story).
+		 */
+		static BlogNav local(ContentLevel level, String outputDir) {
+			ContentLevel prev = Content.getPreviousLocalBlog(level);
+			ContentLevel next = Content.getNextLocalBlog(level);
+			return of(outputDir, prev, next, l -> {
+				ContentItem root = l.getRootItem();
+				return null == root ? null : root.getRelativeTargetPath();
+			});
+		}
+
+		/**
+		 * Nav scoped to the sitewide chronological list of all blog entries.
+		 */
+		static BlogNav global(Content content, ContentLevel level, String outputDir) {
+			ContentLevel prev = content.getPreviousGlobalBlog(level);
+			ContentLevel next = content.getNextGlobalBlog(level);
+			return of(outputDir, prev, next, ContentLevel::getGlobalOutputPath);
+		}
+
+		private static BlogNav of(String outputDir, @Nullable ContentLevel prev, @Nullable ContentLevel next, java.util.function.Function<ContentLevel, String> targetPath) {
+			String prevHref = null;
+			String prevTitle = null;
+			if(null != prev) {
+				String path = targetPath.apply(prev);
+				ContentItem root = prev.getRootItem();
+				if(null != path && null != root) {
+					prevHref = Util.relativeHref(outputDir, path);
+					prevTitle = root.getPageTitle();
+				}
+			}
+			String nextHref = null;
+			String nextTitle = null;
+			if(null != next) {
+				String path = targetPath.apply(next);
+				ContentItem root = next.getRootItem();
+				if(null != path && null != root) {
+					nextHref = Util.relativeHref(outputDir, path);
+					nextTitle = root.getPageTitle();
+				}
+			}
+			return new BlogNav(prevHref, prevTitle, nextHref, nextTitle);
+		}
 	}
 
 	static private void log(String s) {

@@ -42,6 +42,9 @@ public class MarkdownChecker {
 
 	private ContentItem m_currentItem;
 
+	/** Output-relative directory the page currently being rendered will be written to. */
+	private String m_outputDir;
+
 	private List<Message> m_errorList;
 
 	private final Yaml m_yaml = new Yaml();
@@ -75,16 +78,26 @@ public class MarkdownChecker {
 	private boolean m_debug;
 
 	/**
-	 * Render the actual content.
+	 * Render the actual content, writing to the item's own natural output directory.
 	 */
 	public String renderContent(ContentItem item) throws Exception {
+		return renderContent(item, item.getDirectoryPath());
+	}
+
+	/**
+	 * Render the actual content for output at outputDir, which need not be the
+	 * item's own natural directory - this is used to render a story-nested blog
+	 * entry a second time into the sitewide global blog timeline namespace.
+	 */
+	public String renderContent(ContentItem item, String outputDir) throws Exception {
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		m_currentItem = item;
+		m_outputDir = outputDir;
 		Pair<Node, String> result = parse(item.getFile());
 		Node doc = result.getFirst();
 
-		doc.accept(new LinkUpdater());
+		doc.accept(new LinkUpdater(item, outputDir));
 
 		m_debug = item.getType() == ContentType.Blog;
 
@@ -92,10 +105,10 @@ public class MarkdownChecker {
 		//	System.out.println();
 
 		List<Extension> extList = new ArrayList<>(m_extList);
-		extList.add(BlogExtension.create(item));
+		extList.add(BlogExtension.create(item, outputDir));
 		HtmlRenderer renderer = HtmlRenderer.builder()
 			.extensions(extList)
-			.nodeRendererFactory(ctx -> new MdImgRenderer(m_content, item, ctx))
+			.nodeRendererFactory(ctx -> new MdImgRenderer(item, outputDir, ctx))
 			.build();
 		return renderer.render(doc);
 	}
@@ -246,19 +259,11 @@ public class MarkdownChecker {
 	}
 
 	/**
-	 * Create a URL relative to the root, using ../.. paths.
+	 * Create a URL relative to the root, using ../.. paths, correct for the
+	 * output directory of the page currently being rendered.
 	 */
 	public String siteURL(String url) {
-		String rp = m_currentItem.getRelativePath();
-		StringBuilder sb = new StringBuilder();
-		for(int i = 1; i < rp.length(); i++) {
-			char c = rp.charAt(i);
-			if(c == '/') {
-				sb.append("../");
-			}
-		}
-		sb.append(url);
-		return sb.toString();
+		return Util.relativeHref(m_outputDir, url);
 	}
 
 	static void walkNode(Node node, Consumer<Node> nodeConsumer) {

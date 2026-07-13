@@ -10,16 +10,20 @@ public class BlogExtension implements Parser.ParserExtension, HtmlRenderer.HtmlR
 	@Nullable
 	private final ContentItem m_item;
 
-	private BlogExtension(@Nullable ContentItem item) {
+	@Nullable
+	private final String m_outputDir;
+
+	private BlogExtension(@Nullable ContentItem item, @Nullable String outputDir) {
 		m_item = item;
+		m_outputDir = outputDir;
 	}
 
 	public static Extension create() {
-		return new BlogExtension(null);
+		return new BlogExtension(null, null);
 	}
 
-	public static Extension create(ContentItem item) {
-		return new BlogExtension(item);
+	public static Extension create(ContentItem item, String outputDir) {
+		return new BlogExtension(item, outputDir);
 	}
 
 	@Override
@@ -29,7 +33,7 @@ public class BlogExtension implements Parser.ParserExtension, HtmlRenderer.HtmlR
 
 	@Override
 	public void extend(HtmlRenderer.Builder rendererBuilder) {
-		rendererBuilder.nodeRendererFactory(context -> new BlogHtmlRenderer(context, m_item));
+		rendererBuilder.nodeRendererFactory(context -> new BlogHtmlRenderer(context, m_item, m_outputDir));
 	}
 
 	//@Override

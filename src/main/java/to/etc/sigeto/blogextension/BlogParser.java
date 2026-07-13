@@ -14,8 +14,8 @@ import java.util.Set;
 final public class BlogParser extends AbstractBlockParser {
 	private final BlogNode m_block;
 
-	public BlogParser() {
-		m_block = new BlogNode();
+	public BlogParser(Set<String> options) {
+		m_block = new BlogNode(options);
 	}
 
 	@Override public Block getBlock() {
@@ -50,7 +50,7 @@ final public class BlogParser extends AbstractBlockParser {
 				if(c == ']') {
 					if(sb.length() > 0)
 						options.add(sb.toString());
-					return BlockStart.of(new BlogParser()).atIndex(index);
+					return BlockStart.of(new BlogParser(options)).atIndex(index);
 				} else if(Character.isWhitespace(c)) {
 					if(sb.length() > 0) {
 						options.add(sb.toString());

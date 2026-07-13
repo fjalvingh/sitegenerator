@@ -134,6 +134,34 @@ public class Util {
 		return name.substring(0, pos);
 	}
 
+	/**
+	 * The number of "../" segments needed to climb from the given output
+	 * directory (relative to the site root, empty string for the root itself)
+	 * back to the site root.
+	 */
+	public static String depthPrefix(String outputDir) {
+		if(outputDir == null || outputDir.isEmpty())
+			return "";
+		int depth = 1;
+		for(int i = 0; i < outputDir.length(); i++) {
+			if(outputDir.charAt(i) == '/') {
+				depth++;
+			}
+		}
+		return "../".repeat(depth);
+	}
+
+	/**
+	 * Compute a relative href from the given output directory (relative to the
+	 * site root) to the given target path (also relative to the site root), by
+	 * climbing back to the root and then descending to the target. This is not
+	 * necessarily the shortest possible relative path, but it is always correct
+	 * regardless of how deeply nested the current output directory is.
+	 */
+	public static String relativeHref(String outputDir, String targetPath) {
+		return depthPrefix(outputDir) + targetPath;
+	}
+
 	public static Dimension getImageDimension(File imgFile) throws IOException {
 		int pos = imgFile.getName().lastIndexOf(".");
 		if(pos == -1)
@@ -204,6 +232,4 @@ public class Util {
 
 		return !hase;
 	}
-
-
 }

@@ -3,28 +3,34 @@ package to.etc.sigeto;
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.node.Link;
 
-import java.nio.file.Path;
-
 /**
- * Update link targets for .md files to the generated html file.
+ * Update link targets for internal links to point at the generated html
+ * file, using an href that is correct for the page's actual render output
+ * directory (which is not necessarily the same directory the source item
+ * was scanned from - see MarkdownChecker.renderContent).
  */
 final public class LinkUpdater extends AbstractVisitor {
-	@Override public void visit(Link link) {
-		String url = link.getDestination();
-		link.setDestination(fixLink(url));
+	private final ContentItem m_currentItem;
+
+	private final String m_outputDir;
+
+	public LinkUpdater(ContentItem currentItem, String outputDir) {
+		m_currentItem = currentItem;
+		m_outputDir = outputDir;
 	}
 
-	static public String fixLink(String url) {
-		String lcurl = url.toLowerCase();
-		if(lcurl.startsWith("http:") || lcurl.startsWith("https:")) {
+	@Override public void visit(Link link) {
+		link.setDestination(fixLink(link.getDestination()));
+	}
+
+	private String fixLink(String url) {
+		if(!Content.isRelativePath(url)) {
 			return url;
 		}
-		String ext = Util.getExtension(lcurl);
-		if(ext.equalsIgnoreCase("md") || ext.equalsIgnoreCase("mdown")) {
-			url = Util.getFilenameSansExtension(url) + ".html";
-			url = Path.of(url).normalize().toString();
+		ContentItem target = m_currentItem.findItemByURL(url);
+		if(null == target) {
+			return url;
 		}
-		return url;
+		return Util.relativeHref(m_outputDir, target.getRelativeTargetPath());
 	}
-
 }

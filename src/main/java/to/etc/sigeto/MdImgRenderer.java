@@ -17,17 +17,17 @@ import java.util.Map;
 import java.util.Set;
 
 final public class MdImgRenderer implements NodeRenderer {
-	private final Content m_content;
-
 	private final ContentItem m_item;
+
+	private final String m_outputDir;
 
 	private final HtmlWriter m_writer;
 
 	private Dimension m_maxImageSize = new Dimension(900, 900);
 
-	MdImgRenderer(Content content, ContentItem item, HtmlNodeRendererContext context) {
-		m_content = content;
+	MdImgRenderer(ContentItem item, String outputDir, HtmlNodeRendererContext context) {
 		m_item = item;
+		m_outputDir = outputDir;
 		m_writer = context.getWriter();
 	}
 
@@ -49,6 +49,7 @@ final public class MdImgRenderer implements NodeRenderer {
 				ContentItem item = m_item.findItemByURL(url);
 				if(null != item) {
 					//BufferedImage srcBi = ImageIO.read(item.getFile());            // Load the image
+					String href = Util.relativeHref(m_outputDir, item.getRelativeTargetPath());
 
 					Dimension sz = Util.getImageDimension(item.getFile());
 					Dimension maxImageSize = m_maxImageSize;
@@ -57,8 +58,8 @@ final public class MdImgRenderer implements NodeRenderer {
 						int nw = (int) (sz.getWidth() * factor);
 						int nh = (int) (sz.getHeight() * factor);                // New size
 
-						m_writer.tag("a", Map.of("href", url, "class", "ui-im-l"));
-						m_writer.tag("img", imgAttributes(url, alt,
+						m_writer.tag("a", Map.of("href", href, "class", "ui-im-l"));
+						m_writer.tag("img", imgAttributes(href, alt,
 							"width", Integer.toString(nw),
 							"height", Integer.toString(nh)
 						));
@@ -66,7 +67,7 @@ final public class MdImgRenderer implements NodeRenderer {
 						m_writer.tag("/a");
 					} else {
 						//-- Write the original, but add the size for better rendering
-						m_writer.tag("img", imgAttributes(url, alt,
+						m_writer.tag("img", imgAttributes(href, alt,
 							"width", Integer.toString(sz.width),
 							"height", Integer.toString(sz.height)
 						));
