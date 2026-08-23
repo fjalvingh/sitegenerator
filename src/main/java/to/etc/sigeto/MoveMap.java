@@ -19,9 +19,12 @@ import java.util.TreeMap;
  *
  * Moves are keyed exactly like {@link Content}'s item map: content-root relative
  * source paths using forward slashes, without a leading slash, keeping their
- * source extension ("pdp-1144/rl02/second-controller/index.md"). Both markdown
- * and resources are tracked; only markdown gets a redirect page, but a moved
- * image still needs its links repaired.
+ * source extension ("pdp-1144/rl02/second-controller/index.md").
+ *
+ * Only documents are tracked. A resource - an image, a pdf - has no url a
+ * redirect page could be served at, and it moves along with the document
+ * directory it belongs to, so the plain "does this exist" check on its links
+ * is all that is needed for it.
  *
  * The map is kept in a "redirects.tsv" file in the site root, next to content/
  * and templates/ - deliberately not inside content/, which would copy it into
@@ -102,6 +105,8 @@ public class MoveMap {
 			String newPath = rename.getSecond();
 			if(oldPath.equals(newPath))
 				continue;
+			if(!isDocument(oldPath) || !isDocument(newPath))
+				continue;
 
 			//-- Everything that pointed at the old location now points at the new one
 			for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
@@ -128,6 +133,11 @@ public class MoveMap {
 	 */
 	public void resolve(@NonNull Content content, @NonNull List<Message> errorList) {
 		m_usableMap.clear();
+
+		//-- Drop resource moves an older version of this file may still hold
+		m_moveMap.entrySet().removeIf(a -> !isDocument(a.getKey()) || !isDocument(a.getValue()));
+
+
 		for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
 			String oldPath = entry.getKey();
 			String newPath = collapseChain(oldPath, entry.getValue());
@@ -143,6 +153,15 @@ public class MoveMap {
 			}
 			m_usableMap.put(oldPath, newPath);
 		}
+	}
+
+	/**
+	 * T if this path addresses a document, which is the only thing worth
+	 * remembering a move for: it is the only thing with an url of its own.
+	 */
+	static boolean isDocument(@NonNull String path) {
+		String extension = Util.getExtension(path).toLowerCase();
+		return "md".equals(extension) || "mdown".equals(extension);
 	}
 
 	/**

@@ -26,17 +26,14 @@ final class RedirectWriter {
 	}
 
 	/**
-	 * Generate a redirect page for every known move whose old location is a
-	 * markdown document that is no longer there. Returns the number of pages
-	 * written.
+	 * Generate a redirect page for every known move whose old location is no
+	 * longer there. Returns the number of pages written.
 	 */
 	static int write(@NonNull File outputRoot, @NonNull File templateRoot, @NonNull TemplateEngine templateEngine, @NonNull Content content, @NonNull MoveMap moveMap) throws Exception {
 		boolean hasTemplate = new File(templateRoot, TEMPLATE).exists();
 		int count = 0;
 		for(Map.Entry<String, String> entry : moveMap.getUsableMoves().entrySet()) {
 			String oldPath = entry.getKey();
-			if(!isMarkdown(oldPath))									// Only pages have an URL that a redirect page can serve
-				continue;
 			ContentItem target = content.findItem(entry.getValue());
 			if(null == target)											// Already reported by MoveMap.resolve
 				continue;
@@ -137,11 +134,6 @@ final class RedirectWriter {
 				return false;
 		}
 		return true;
-	}
-
-	private static boolean isMarkdown(@NonNull String path) {
-		String extension = Util.getExtension(path).toLowerCase();
-		return "md".equals(extension) || "mdown".equals(extension);
 	}
 
 	@NonNull

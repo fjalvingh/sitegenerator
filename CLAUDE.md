@@ -46,9 +46,9 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   generated `.html` targets.
 - `MoveMap.java` / `GitMoveScanner.java` / `LinkFix.java` /
   `SourceLinkFixer.java` / `RedirectWriter.java` — document move tracking.
-  `GitMoveScanner` asks git for the renames below `content/`, `MoveMap`
-  merges those into the checked-in `<siteRoot>/redirects.tsv` and collapses
-  move chains, `RedirectWriter` emits a meta-refresh page at each old URL,
+  `GitMoveScanner` asks git for the renames below `content/` (committed and
+  staged), `MoveMap` merges the document ones into the checked-in
+  `<siteRoot>/redirects.tsv` and collapses move chains, `RedirectWriter` emits a meta-refresh page at each old URL,
   and `SourceLinkFixer` repairs links to moved documents in the `.md` sources
   (which is reported as an error so the build stops and the change gets
   committed). See the "Moved documents" section of `README.md`.

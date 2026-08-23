@@ -153,6 +153,10 @@ At the start of every build it asks git which files it has seen renamed below
 old-name/index.md	new-place/old-name/index.md
 ```
 
+Only documents are recorded. An image or a pdf has no url of its own that a
+redirect page could be served at, and it moves along with the article directory
+it belongs to, so the ordinary link check covers it.
+
 **Commit that file.** It is what keeps old URLs alive once the move scrolls out
 of the history git can see (or when the content is copied into another
 repository). It can also be edited by hand, which is the way to record moves

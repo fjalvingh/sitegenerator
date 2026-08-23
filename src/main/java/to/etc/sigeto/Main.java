@@ -12,6 +12,7 @@ import org.kohsuke.args4j.Option;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -118,24 +119,31 @@ public class Main {
 
 			//-- Now render
 			CodeResolver codeResolver = new DirectoryCodeResolver(Path.of(templateRoot.toString())); // This is the directory where your .jte files are located.
-			TemplateEngine templateEngine = TemplateEngine.create(codeResolver, gg.jte.ContentType.Html);
-			Util.dirEmpty(outputRoot);
-			for(ContentItem item : content.getItemList()) {
-				renderItem(outputRoot, templateEngine, mc, item, content);
-			}
 
-			//-- Render the sitewide global timeline copy of every story-nested blog entry
-			for(ContentLevel blog : content.getAllBlogEntries()) {
-				if(!blog.isGlobalBlogRoot()) {
-					renderGlobalBlogMirror(outputRoot, templateEngine, mc, blog, content);
+			//-- jte compiles the templates to class files; keep those out of the site's own directories
+			Path jteClassPath = Files.createTempDirectory("sigeto-jte");
+			try {
+				TemplateEngine templateEngine = TemplateEngine.create(codeResolver, jteClassPath, gg.jte.ContentType.Html);
+				Util.dirEmpty(outputRoot);
+				for(ContentItem item : content.getItemList()) {
+					renderItem(outputRoot, templateEngine, mc, item, content);
 				}
+
+				//-- Render the sitewide global timeline copy of every story-nested blog entry
+				for(ContentLevel blog : content.getAllBlogEntries()) {
+					if(!blog.isGlobalBlogRoot()) {
+						renderGlobalBlogMirror(outputRoot, templateEngine, mc, blog, content);
+					}
+				}
+
+				//-- Copy theme data
+				copyTemplateAssets(outputRoot, templateRoot);
+
+				//-- And keep the urls of everything that moved working
+				RedirectWriter.write(outputRoot, templateRoot, templateEngine, content, moveMap);
+			} finally {
+				Util.deleteDir(jteClassPath.toFile());
 			}
-
-			//-- Copy theme data
-			copyTemplateAssets(outputRoot, templateRoot);
-
-			//-- And keep the urls of everything that moved working
-			RedirectWriter.write(outputRoot, templateRoot, templateEngine, content, moveMap);
 
 
 		} catch(MessageException x) {
