@@ -63,6 +63,11 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   - `tables/` — GFM table rendering.
   - `blogextension/` — blog-entry-specific parsing/rendering.
 - `Util.java` — file IO helpers (copy, empty-dir, string IO).
+- `install-hooks.sh` + `githooks/sigeto-check.sh` — installs and implements the
+  `pre-commit` / `pre-push` hooks for a *site* repository (not this one), which
+  generate the site and refuse the commit when it does not build or when the
+  generator had to record a move or repair a link. Configured through the site
+  repository's git config (`sigeto.home`, `sigeto.siteroot`, `sigeto.output`).
 
 ## Conventions to follow
 
@@ -82,4 +87,8 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   subpackage, `*Extension` implementing `ParserExtension`/
   `HtmlRendererExtension`, registered in `MarkdownChecker`'s `m_extList`) not
   be bolted directly onto `MarkdownChecker`.
+- Html tag attributes for `HtmlWriter.tag()` must be built with
+  `Util.attributes(name, value, ...)`, not `Map.of(...)`: `Map.of` randomizes
+  its iteration order per JVM run, which makes the generated html differ
+  between builds of the same site.
 - Don't hand-edit anything under `_output/` directories — it's generated.

@@ -20,6 +20,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class Util {
 	static public final long KB = 1024L;
@@ -103,6 +105,23 @@ public class Util {
 	public static void ignore(boolean delete) {
 		//-- And we need a nested comment too 8-(
 
+	}
+
+	/**
+	 * Build an attribute map for HtmlWriter.tag() from name/value pairs, which
+	 * keeps the order the attributes are given in. Map.of cannot be used for
+	 * this: its iteration order is randomized per JVM run, which makes the
+	 * generated html differ between builds of the very same site.
+	 */
+	@NonNull
+	public static Map<String, String> attributes(String... nameValuePairs) {
+		if((nameValuePairs.length % 2) != 0)
+			throw new IllegalArgumentException("Expected name/value pairs but got " + nameValuePairs.length + " values");
+		Map<String, String> map = new LinkedHashMap<>();
+		for(int i = 0; i < nameValuePairs.length; i += 2) {
+			map.put(nameValuePairs[i], nameValuePairs[i + 1]);
+		}
+		return map;
 	}
 
 	public static String getExtension(String name) {

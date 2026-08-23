@@ -4,8 +4,8 @@ import org.commonmark.node.Node;
 import org.commonmark.renderer.NodeRenderer;
 import org.commonmark.renderer.html.HtmlNodeRendererContext;
 import org.commonmark.renderer.html.HtmlWriter;
+import to.etc.sigeto.Util;
 
-import java.util.Map;
 import java.util.Set;
 
 public class EmojiRenderer implements NodeRenderer {
@@ -25,7 +25,7 @@ public class EmojiRenderer implements NodeRenderer {
 		EmojiNode emoji = (EmojiNode) node;
 
 		//-- We need an inline img.
-		m_htmlWriter.tag("img", Map.of(
+		m_htmlWriter.tag("img", Util.attributes(
 			"src", emoji.getRef().getUrl(),
 			"width", "16",
 			"height", "16",

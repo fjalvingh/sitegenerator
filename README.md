@@ -188,6 +188,49 @@ a `RedirectModel` with `getTargetHref()` (the link to the new location,
 relative to the old one) and `getTargetTitle()`. Without it a plain built-in
 page is used.
 
+## Checking the site before every commit
+
+Because a move is only handled properly when the generator gets to see it, it
+is worth running the generator before a commit is accepted rather than finding
+out when the site is published. `install-hooks.sh` installs git hooks in a site
+repository that do exactly that. Run it from the root of the site repository:
+
+```
+sitegenerator/install-hooks.sh
+```
+
+It finds the site source (the directory holding `content/` and `templates/`),
+records where it and the generator live in the repository's git config, and
+installs a `pre-commit` and a `pre-push` hook. From then on:
+
+- A commit that touches the site generates the site first, and is refused when
+  the site does not build - a dangling link, a broken template.
+- When the generator records a move in `redirects.tsv` or repairs a link in the
+  sources, the commit is refused too, listing what it changed, so you review it
+  and `git add` it before committing again. A move is therefore always
+  committed together with its redirect record and its repaired links.
+- Pushing runs the same check over the whole site, catching anything that got
+  in with `--no-verify`.
+- A commit that does not touch the site is not checked at all.
+- The generator jar is built with maven if it is missing or older than its own
+  sources, so a freshly cloned or updated submodule needs no separate build.
+
+Moves that are only staged are picked up as well: `git mv` an article and the
+very next commit already knows the document moved, rather than reporting every
+link to it as broken.
+
+Options:
+
+```
+sitegenerator/install-hooks.sh [--repo <dir>] [--site-root <dir>]
+                              [--output <dir>] [--force] [--uninstall]
+```
+
+An existing hook that this script did not write is never replaced without
+`--force`, which keeps it as `<hook>.bak` and puts it back on `--uninstall`.
+As always with git hooks, `git commit --no-verify` and `git push --no-verify`
+skip them.
+
 ## Templates
 
 Templates are [jte](https://jte.gg/) files. `base.jte` is rendered once per

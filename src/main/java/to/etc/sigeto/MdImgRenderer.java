@@ -12,7 +12,6 @@ import org.eclipse.jdt.annotation.NonNull;
 import to.etc.sigeto.unidiot.WrappedException;
 
 import java.awt.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,7 +57,7 @@ final public class MdImgRenderer implements NodeRenderer {
 						int nw = (int) (sz.getWidth() * factor);
 						int nh = (int) (sz.getHeight() * factor);                // New size
 
-						m_writer.tag("a", Map.of("href", href, "class", "ui-im-l"));
+						m_writer.tag("a", Util.attributes("href", href, "class", "ui-im-l"));
 						m_writer.tag("img", imgAttributes(href, alt,
 							"width", Integer.toString(nw),
 							"height", Integer.toString(nh)
@@ -104,9 +103,7 @@ final public class MdImgRenderer implements NodeRenderer {
 	}
 
 	private Map<String, String> imgAttributes(String url, String alt, String... extra) {
-		Map<String, String> map = new HashMap<>();
-		map.put("src", url);
-		map.put("alt", alt);
+		Map<String, String> map = Util.attributes("src", url, "alt", alt);
 		for(int i = 0; i < extra.length; i += 2) {
 			map.put(extra[i], extra[i + 1]);
 		}

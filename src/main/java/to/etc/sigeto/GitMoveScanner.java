@@ -33,10 +33,16 @@ final class GitMoveScanner {
 	}
 
 	/**
-	 * Return all renames git detected below the content root, as
+	 * Return all renames git knows about below the content root, as
 	 * (oldPath, newPath) pairs relative to that content root, in chronological
 	 * (oldest first) order so that chained moves can be collapsed by replaying
 	 * them in sequence.
+	 *
+	 * Renames that are only staged are included, last, as they are the newest
+	 * ones. This matters for the pre-commit hook: when a move is about to be
+	 * committed it is in the index but not yet in the history, and without it
+	 * every link to the moved document would be reported as simply broken
+	 * instead of being repaired.
 	 */
 	@NonNull
 	static List<Pair<String, String>> scanRenames(@NonNull File contentRoot) {
@@ -48,7 +54,14 @@ final class GitMoveScanner {
 		String log = runGit(contentRoot, "log", "--reverse", "--diff-filter=R", "-M", "--name-status", "-z", "--format=", "--", ".");
 		if(null == log)
 			return Collections.emptyList();
-		return parseRenames(log, prefix);
+		List<Pair<String, String>> renameList = new ArrayList<>(parseRenames(log, prefix));
+
+		//-- Whatever is staged happened after everything in the history
+		String staged = runGit(contentRoot, "diff", "--cached", "--diff-filter=R", "-M", "--name-status", "-z", "--", ".");
+		if(null != staged) {
+			renameList.addAll(parseRenames(staged, prefix));
+		}
+		return renameList;
 	}
 
 	/**
