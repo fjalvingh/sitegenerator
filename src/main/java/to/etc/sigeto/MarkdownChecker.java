@@ -7,6 +7,8 @@ import org.commonmark.node.Heading;
 import org.commonmark.node.Image;
 import org.commonmark.node.Link;
 import org.commonmark.node.Node;
+import org.commonmark.node.SourceSpan;
+import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.commonmark.renderer.text.TextContentRenderer;
@@ -35,6 +37,9 @@ public class MarkdownChecker {
 
 	private final Content m_content;
 
+	@NonNull
+	private final MoveMap m_moveMap;
+
 	private final List<Extension> m_extList;
 
 	//@NonNull
@@ -47,12 +52,26 @@ public class MarkdownChecker {
 
 	private List<Message> m_errorList;
 
+	/**
+	 * The links found pointing at documents that have moved, to be repaired in
+	 * the sources by {@link SourceLinkFixer}.
+	 */
+	private final List<LinkFix> m_linkFixList = new ArrayList<>();
+
+	/**
+	 * The number of lines {@link #parse(File)} removed from the front of the
+	 * file (front matter and the blank lines before it), needed to map the
+	 * parser's line numbers back onto the real source file.
+	 */
+	private int m_lineOffset;
+
 	private final Yaml m_yaml = new Yaml();
 
 	private TextContentRenderer m_textRenderer = new TextContentRenderer.Builder().build();
 
-	public MarkdownChecker(Content content) {
+	public MarkdownChecker(Content content, @NonNull MoveMap moveMap) {
 		m_content = content;
+		m_moveMap = moveMap;
 		//options.set(Parser.EXTENSIONS, Arrays.asList(
 		//	TypographicExtension.create(),
 		//	SuperscriptExtension.create(),
@@ -72,6 +91,7 @@ public class MarkdownChecker {
 		extList.add(BlogExtension.create());
 		m_parser = Parser.builder()
 			.extensions(extList)
+			.includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)		// Needed to report and repair links by line
 			.build();
 	}
 
@@ -175,11 +195,15 @@ public class MarkdownChecker {
 	private Pair<Node, String> parse(File file) throws Exception {
 		StringBuilder yaml = new StringBuilder();
 		StringBuilder markdown = new StringBuilder();
+		int skippedLines = 0;
 
 		Segment seg = Segment.beforeMd;
 		try(LineNumberReader reader = new LineNumberReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 			String line;
 			while(null != (line = reader.readLine())) {
+				if(seg != Segment.inMarkdown) {
+					skippedLines++;								// Blank lines and front matter never reach the parser
+				}
 				switch(seg){
 					default:
 						throw new IllegalStateException(seg + " ??");
@@ -194,6 +218,7 @@ public class MarkdownChecker {
 								//-- Not fron matter; must be 1st markdown thingy.
 								markdown.append(line).append("\n");
 								seg = Segment.inMarkdown;
+								skippedLines--;						// This line IS passed to the parser
 							}
 						}
 						break;
@@ -215,6 +240,7 @@ public class MarkdownChecker {
 		}
 
 		//-- Parse frontmatter if present
+		m_lineOffset = skippedLines;
 		Node doc = m_parser.parse(markdown.toString());
 		return new Pair<>(doc, yaml.toString());
 	}
@@ -247,15 +273,69 @@ public class MarkdownChecker {
 	}
 
 	private void checkReference(Node node, String url, String kind) {
-		if(!Content.isRelativePath(url))
+		String path = m_currentItem.resolveURL(url);
+		if(null == path)												// External link or in-page anchor: not ours to check
 			return;
 
-		ContentItem item = m_currentItem.findItemByURL(url);
+		ContentItem item = m_content.findItem(path);
 		if(null == item) {
-			m_errorList.add(new Message(m_currentItem, node.getSourceSpans(), MsgType.Error, kind + " link to unknown document: " + url));
+			checkMovedReference(node, url, path, kind);
 			return;
 		}
 		m_currentItem.addUsedItem(item, url);
+	}
+
+	/**
+	 * A link to something that is not there (any more). If the document it
+	 * addresses is known to have moved then rewrite the link in the source
+	 * (see {@link SourceLinkFixer}) - but still report it as an error, so that
+	 * the build stops and the change gets reviewed and committed before the
+	 * site is published.
+	 */
+	private void checkMovedReference(Node node, String url, String path, String kind) {
+		String target = m_moveMap.getTarget(path);
+		if(null == target) {
+			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error, kind + " link to unknown document: " + url));
+			return;
+		}
+
+		String newUrl = moveURL(url, target);
+		m_linkFixList.add(new LinkFix(m_currentItem, lineNumber(node), url, newUrl));
+		m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error,
+			kind + " link to moved document: " + url + " is now at " + newUrl + " (fixed in the source; review and commit it)"));
+	}
+
+	/**
+	 * Rewrite a url that addressed the old location into one addressing the
+	 * new one, keeping the way the original was written: a url starting at the
+	 * site root stays site-root relative, anything else stays relative to the
+	 * page using it.
+	 */
+	private String moveURL(String url, String target) {
+		if(url.startsWith("/"))
+			return "/" + target;
+		String base = m_currentItem.getDirectoryPath();
+		return Util.relativeHref(base, target);
+	}
+
+	/**
+	 * The 1-based line in the actual source file a node starts on, correcting
+	 * for the front matter that was removed before parsing.
+	 */
+	private int lineNumber(Node node) {
+		List<SourceSpan> spanList = node.getSourceSpans();
+		if(spanList == null || spanList.isEmpty())
+			return 0;
+		return spanList.get(0).getLineIndex() + m_lineOffset + 1;
+	}
+
+	/**
+	 * The links found pointing at documents that have moved, over all files
+	 * scanned so far.
+	 */
+	@NonNull
+	public List<LinkFix> getLinkFixList() {
+		return m_linkFixList;
 	}
 
 	/**

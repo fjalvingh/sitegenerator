@@ -107,21 +107,31 @@ public class ContentItem {
 
 	@Nullable
 	public ContentItem findItemByURL(String url) {
+		String fullPath = resolveURL(url);
+		if(null == fullPath)
+			return null;
+		return getContent().findItem(fullPath);
+	}
+
+	/**
+	 * Resolve a link or image url used on this page into the content-root
+	 * relative path it addresses, in the form the content map is keyed by.
+	 * Returns null for urls that do not address content at all (external
+	 * links, in-page anchors).
+	 */
+	@Nullable
+	public String resolveURL(String url) {
 		if(!Content.isRelativePath(url))
 			return null;
 
-		String fullPath;
 		if(url.startsWith("/")) {
-			fullPath = url.substring(1);
-		} else {
-			//-- Relative wrt the parent
-			Path path = Path.of(getDirectoryPath());
-			Path resolvedPath = path.resolve(url).normalize();
-			fullPath = resolvedPath.toString();
+			return url.substring(1);
 		}
 
-		ContentItem item = getContent().findItem(fullPath);
-		return item;
+		//-- Relative wrt the parent
+		Path path = Path.of(getDirectoryPath());
+		Path resolvedPath = path.resolve(url).normalize();
+		return resolvedPath.toString();
 	}
 
 

@@ -72,14 +72,21 @@ public class Main {
 				throw new MessageException("No markdown source files found at " + sourceRoot);
 			}
 
+			List<Message> errorList = new ArrayList<>();
+
+			//-- Find out which documents moved, so old urls and stale links can be handled
+			MoveMap moveMap = MoveMap.load(sourceRoot);
+			moveMap.mergeRenames(GitMoveScanner.scanRenames(contentRoot));
+			moveMap.resolve(content, errorList);
+			moveMap.saveIfChanged();
+
 			//-- Scan all markdown files, and check them
 			List<ContentItem> markdownList = content.getItemList().stream()
 				.filter(a -> a.getFileType() == ContentFileType.Markdown)
 				.collect(Collectors.toList());
 			int mdFiles = 0;
 			int blogFiles = 0;
-			MarkdownChecker mc = new MarkdownChecker(content);
-			List<Message> errorList = new ArrayList<>();
+			MarkdownChecker mc = new MarkdownChecker(content, moveMap);
 			for(ContentItem item : markdownList) {
 				mc.scanContent(errorList, item);
 				if(item.getType() == ContentType.Page) {
@@ -91,11 +98,21 @@ public class Main {
 			}
 			System.out.println("Found " + mdFiles + " pages and " + blogFiles + " blog items");
 
+			//-- Repair the links to moved documents in the sources themselves
+			List<LinkFix> linkFixList = mc.getLinkFixList();
+			if(!linkFixList.isEmpty()) {
+				SourceLinkFixer.apply(linkFixList, errorList);
+			}
+
 			if(!errorList.isEmpty()) {
 				for(Message message : errorList) {
 					System.err.println(message);
 				}
-				System.exit(9);
+
+				//-- Warnings are worth reporting but should not stop the build
+				if(errorList.stream().anyMatch(a -> a.getType() == MsgType.Error)) {
+					System.exit(9);
+				}
 			}
 			content.complete();
 
@@ -116,6 +133,9 @@ public class Main {
 
 			//-- Copy theme data
 			copyTemplateAssets(outputRoot, templateRoot);
+
+			//-- And keep the urls of everything that moved working
+			RedirectWriter.write(outputRoot, templateRoot, templateEngine, content, moveMap);
 
 
 		} catch(MessageException x) {

@@ -44,6 +44,14 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   page depth.
 - `LinkUpdater.java` — rewrites `.md` links in the AST to point at the
   generated `.html` targets.
+- `MoveMap.java` / `GitMoveScanner.java` / `LinkFix.java` /
+  `SourceLinkFixer.java` / `RedirectWriter.java` — document move tracking.
+  `GitMoveScanner` asks git for the renames below `content/`, `MoveMap`
+  merges those into the checked-in `<siteRoot>/redirects.tsv` and collapses
+  move chains, `RedirectWriter` emits a meta-refresh page at each old URL,
+  and `SourceLinkFixer` repairs links to moved documents in the `.md` sources
+  (which is reported as an error so the build stops and the change gets
+  committed). See the "Moved documents" section of `README.md`.
 - `MdImgRenderer.java` — custom image node renderer (resolves/copies image
   resources relative to the current page).
 - Custom commonmark extensions, one per subpackage, each following the same

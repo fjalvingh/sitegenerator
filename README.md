@@ -53,7 +53,9 @@ A site source directory (the `-i` argument) must contain two subdirectories:
         index.md         a nested article (a directory inside its parent)
   templates/          jte templates and static theme assets (css, img, ...)
     base.jte           the main page template (required, invoked for every page)
+    redirect.jte       optional template for moved-document redirect pages
     css/, img/, ...     copied verbatim into the output root
+  redirects.tsv       the record of moved documents (generated, commit it)
 ```
 
 Rules:
@@ -131,9 +133,60 @@ anchors.
 
 Internal links and images (`[text](other-page.md)`, `![alt](photo.png)`) are
 checked at build time — the generator refuses to produce output if a link or
-image points at a file that doesn't exist in `content/`. Directories detected
+image points at a file that doesn't exist in `content/`. If the file was moved
+rather than deleted the link is repaired in the source, see
+[Moved documents](#moved-documents). Directories detected
 as blog entries (see above) get additional blog-specific rendering (entry
 listing, dates) via the blog extension.
+
+## Moved documents
+
+Renaming or moving an article changes its URL, which breaks every link to it
+that lives outside the site and cannot be fixed - search results, other
+people's pages, forum posts. The generator keeps those links working.
+
+At the start of every build it asks git which files it has seen renamed below
+`content/`, and records each move in `redirects.tsv` in the site root:
+
+```
+# sigeto redirect map: <old path><TAB><new path>, relative to content/.
+old-name/index.md	new-place/old-name/index.md
+```
+
+**Commit that file.** It is what keeps old URLs alive once the move scrolls out
+of the history git can see (or when the content is copied into another
+repository). It can also be edited by hand, which is the way to record moves
+made before the site used a generator - or moves made without git. Moves that
+chain (a page moved twice) are collapsed automatically, so every old location
+points straight at the current one.
+
+Two things then happen:
+
+- **Old URLs keep working.** For every old location a small page is generated
+  in the output that redirects to the document's current location, using a
+  `meta refresh` plus a `canonical` link. This needs no server configuration,
+  so it works on plain static hosting like Github Pages. If a location is
+  filled with new content later on, that real page wins and no redirect is
+  generated for it.
+- **Stale links in your own sources are repaired.** A link or image in a
+  markdown file that points at a moved document is rewritten in the source
+  file to point at the new location. The build then reports each one and
+  stops, so you can review the changes and commit them - after which the next
+  build runs through cleanly:
+
+```
+Fixed 1 stale link(s) in 1 file(s) - please review and commit them
+Error index.md(28)  Link link to moved document: hp-7470a-plotter/index.md is now at digital-tools/hp-7470a-plotter/index.md (fixed in the source; review and commit it)
+```
+
+If the content is not in a git repository nothing breaks; `redirects.tsv` is
+then the only source of moves, and a site that has never had one gets no file
+at all.
+
+To style the redirect pages, add a `redirect.jte` to `templates/`. It receives
+a `RedirectModel` with `getTargetHref()` (the link to the new location,
+relative to the old one) and `getTargetTitle()`. Without it a plain built-in
+page is used.
 
 ## Templates
 
