@@ -138,13 +138,17 @@ public class MoveMap {
 		m_moveMap.entrySet().removeIf(a -> !isDocument(a.getKey()) || !isDocument(a.getValue()));
 
 
+		//-- Point every old location straight at the newest one
+		for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
+			entry.setValue(collapseChain(entry.getKey(), entry.getValue()));
+		}
+
+		//-- A document that moved away and back again did not move at all
+		m_moveMap.entrySet().removeIf(a -> a.getKey().equals(a.getValue()));
+
 		for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
 			String oldPath = entry.getKey();
-			String newPath = collapseChain(oldPath, entry.getValue());
-			entry.setValue(newPath);
-
-			if(oldPath.equals(newPath))
-				continue;
+			String newPath = entry.getValue();
 			if(null != content.findItem(oldPath))				// The old path is live content again
 				continue;
 			if(null == content.findItem(newPath)) {
