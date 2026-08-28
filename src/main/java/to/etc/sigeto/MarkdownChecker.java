@@ -13,8 +13,11 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.commonmark.renderer.text.TextContentRenderer;
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.yaml.snakeyaml.Yaml;
 import to.etc.sigeto.blogextension.BlogExtension;
+import to.etc.sigeto.demos.DemoBlock;
+import to.etc.sigeto.demos.DemoExtension;
 import to.etc.sigeto.emojis.EmojiExtension;
 import to.etc.sigeto.notifications.NotificationsExtension;
 import to.etc.sigeto.tables.MyTablesExtension;
@@ -69,9 +72,14 @@ public class MarkdownChecker {
 
 	private TextContentRenderer m_textRenderer = new TextContentRenderer.Builder().build();
 
-	public MarkdownChecker(Content content, @NonNull MoveMap moveMap) {
+	/** The -include base url that "!demo(path)" tags resolve against, null when the build got none. */
+	@Nullable
+	private final String m_includeBase;
+
+	public MarkdownChecker(Content content, @NonNull MoveMap moveMap, @Nullable String includeBase) {
 		m_content = content;
 		m_moveMap = moveMap;
+		m_includeBase = includeBase;
 		//options.set(Parser.EXTENSIONS, Arrays.asList(
 		//	TypographicExtension.create(),
 		//	SuperscriptExtension.create(),
@@ -84,7 +92,8 @@ public class MarkdownChecker {
 			TocExtension.create(),
 			HeadingAnchorExtension.create(),
 			NotificationsExtension.create(),
-			EmojiExtension.create()
+			EmojiExtension.create(),
+			DemoExtension.create(includeBase)
 		);
 
 		List<Extension> extList = new ArrayList<>(m_extList);
@@ -251,12 +260,34 @@ public class MarkdownChecker {
 			checkLink((Link) node);
 		} else if(node instanceof Image) {
 			checkImage((Image) node);
+		} else if(node instanceof DemoBlock) {
+			checkDemo((DemoBlock) node);
 		} else if(node instanceof Heading) {
 			Heading heading = (Heading) node;
 			if(m_currentItem.getPageTitle() == null) {
 				String hdr = m_textRenderer.render(heading);
 				m_currentItem.setPageTitle(hdr);
 			}
+		}
+	}
+
+	/**
+	 * A "!demo(path)" tag can only be rendered when the build knows what to
+	 * resolve its path against, so a page using one without -include is an
+	 * error - silently leaving a hole in the page would be worse.
+	 */
+	private void checkDemo(DemoBlock demo) {
+		if(null == m_includeBase) {
+			m_errorList.add(new Message(m_currentItem, lineNumber(demo), MsgType.Error,
+				"!demo(" + demo.getPath() + ") needs a base url for the application: run the generator with -include <url>"));
+			return;
+		}
+		String problem = DemoBlock.checkSize(demo.getWidth(), "width");
+		if(null == problem) {
+			problem = DemoBlock.checkSize(demo.getHeight(), "height");
+		}
+		if(null != problem) {
+			m_errorList.add(new Message(m_currentItem, lineNumber(demo), MsgType.Error, problem));
 		}
 	}
 

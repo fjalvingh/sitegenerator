@@ -13,7 +13,13 @@
 #                      templates/ (relative to the repository root)
 #   sigeto.output      optional output directory, default <siteroot>/_output
 #
+# Extra generator options can be passed in the SIGETO_ARGS environment
+# variable; a site using !demo() tags needs its -include base url there, e.g.
+# SIGETO_ARGS='-include https://demo.example.org/demo'.
+#
 set -u
+
+SIGETO_ARGS="${SIGETO_ARGS:-}"
 
 hook="${1:-pre-commit}"
 
@@ -94,9 +100,9 @@ before=$(git status --porcelain -- "$siteRoot" 2>/dev/null)
 
 say "generating the site from $siteRoot ..."
 if [ -n "$outputDir" ]; then
-	java -jar "$jar" -i "$siteDir" -o "$(absolute "$outputDir")"
+	java -jar "$jar" $SIGETO_ARGS -i "$siteDir" -o "$(absolute "$outputDir")"
 else
-	java -jar "$jar" -i "$siteDir"
+	java -jar "$jar" $SIGETO_ARGS -i "$siteDir"
 fi
 status=$?
 

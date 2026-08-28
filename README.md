@@ -29,6 +29,9 @@ java -jar target/sitegen-jar-with-dependencies.jar -i <site-root> [-o <output-di
   "Site layout" below).
 - `-o` / `-output` (optional): where to write the generated site. Defaults to
   `<site-root>/_output`. The output directory is emptied before each run.
+- `-include` (optional): the base URL that `!demo(path)` tags are resolved
+  against, e.g. `https://demo.example.org/demo`. Only needed by a site that
+  uses those tags; see "Embedded application pages" below.
 
 The `testsite/` directory in this repository is a full example site (the
 author's real site content) and can be used to try the generator out, e.g.:
@@ -117,6 +120,43 @@ styled callout box:
 | `!v `  | success |
 | `!w` / `!! ` | warning |
 | `!x` / `!e ` | error   |
+
+### Embedded application pages
+
+Documentation for an application is a lot more convincing when the application
+itself is on the page. A line that is nothing but a `!demo()` tag becomes an
+iframe showing one page of the live application:
+
+```
+!demo(to.etc.domuidemo.pages.HomePage.ui)
+!demo(to.etc.domuidemo.pages.HomePage.ui, 1024, 640)
+!demo(to.etc.domuidemo.pages.HomePage.ui, 100%)
+```
+
+The path in the tag is appended to the `-include` base url, with exactly one
+slash between the two, so the documentation does not hard-code which
+installation it is shown against - a local build, the public demo and a
+customer's acceptance server are all the same source with a different
+`-include`. A path that is a full `http(s)://` url is used as it is written.
+
+After the path come the width and then the height, both optional: a bare number
+is pixels, anything else is used as a css length (`100%`, `40em`). Leaving one
+out keeps its default, and the default size is **1280 by 800**.
+
+The tag renders as
+
+```html
+<div class="ui-demo"><iframe class="ui-demo-frame" src="..." style="width: 1280px; height: 800px;" loading="lazy" title="..."></iframe></div>
+```
+
+so the stylesheet decides what happens on a screen narrower than the frame -
+the wrapping div is there to be given `overflow-x: auto`, which keeps the
+application at the size it is being demonstrated at instead of squashing it.
+
+A page that uses `!demo()` in a build without `-include` is an error, naming
+the file and the line: a silently missing application page looks like the
+documentation is broken. A width or height that is not a length is reported the
+same way.
 
 ### Emoji
 
@@ -261,6 +301,15 @@ Options:
 ```
 sitegenerator/install-hooks.sh [--repo <dir>] [--site-root <dir>]
                               [--output <dir>] [--force] [--uninstall]
+```
+
+Generator options the site needs are passed in `SIGETO_ARGS`, which matters for
+a site using `!demo()` tags: without its `-include` base url the hook's build
+fails on every one of them. Put it where the hook will see it, e.g. in the
+repository's `.git/hooks` environment or your shell profile:
+
+```
+export SIGETO_ARGS='-include https://demo.example.org/demo'
 ```
 
 An existing hook that this script did not write is never replaced without

@@ -25,6 +25,9 @@ public class Main {
 	@Option(name = "-o", aliases = {"-output"}, usage = "The output directory, default is _output in the site root")
 	private String m_outputRoot;
 
+	@Option(name = "-include", usage = "Base URL that the paths in !demo(path) tags are resolved against, like https://demo.example.org/demo")
+	private String m_includeBase;
+
 	static public void main(String[] args) {
 		try {
 			new Main().run(args);
@@ -91,7 +94,7 @@ public class Main {
 				.collect(Collectors.toList());
 			int mdFiles = 0;
 			int blogFiles = 0;
-			MarkdownChecker mc = new MarkdownChecker(content, moveMap);
+			MarkdownChecker mc = new MarkdownChecker(content, moveMap, includeBase());
 			for(ContentItem item : markdownList) {
 				mc.scanContent(errorList, item);
 				if(item.getType() == ContentType.Page) {
@@ -203,6 +206,24 @@ public class Main {
 			? ""
 			: " To start recording them from here on, make that line: #moves since " + head;
 		System.out.println("Move tracking is off ('#moves off' in " + MoveMap.FILENAME + "): git renames are ignored." + hint);
+	}
+
+	/**
+	 * The base url for the "!demo(path)" tags, checked as far as it can be:
+	 * whether it actually serves anything is only known at the moment someone
+	 * looks at the page.
+	 */
+	@Nullable
+	private String includeBase() {
+		String base = m_includeBase;
+		if(null == base)
+			return null;
+		base = base.trim();
+		if(base.isEmpty())
+			throw new MessageException("-include: the base url is empty");
+		if(!base.toLowerCase().startsWith("http://") && !base.toLowerCase().startsWith("https://"))
+			throw new MessageException("-include " + base + ": the base url must start with http:// or https://");
+		return base;
 	}
 
 	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
