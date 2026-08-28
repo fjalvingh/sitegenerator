@@ -40,7 +40,28 @@ public class MoveMap {
 		+ "# sigeto redirect map: <old path><TAB><new path>, relative to content/.\n"
 		+ "# Maintained automatically from the renames git detects, and used to\n"
 		+ "# generate redirect pages at the old locations. Hand edits are kept;\n"
-		+ "# commit this file.\n";
+		+ "# commit this file.\n"
+		+ "#\n"
+		+ "# An optional '#moves' line says which renames are picked up from git:\n"
+		+ "#   #moves off              ignore them all, while a site is being restructured\n"
+		+ "#   #moves since <commit>   only the renames made after <commit>\n"
+		+ "#   #moves all              every rename in the history (the default)\n"
+		+ "# The moves already listed below keep working whatever it says.\n";
+
+	/** The name of the line that decides which git renames are collected. */
+	private static final String DIRECTIVE = "#moves";
+
+	/** What to collect from git's rename history. */
+	public enum Tracking {
+		/** Every rename git can see: the default when there is no '#moves' line. */
+		All,
+
+		/** None at all - the site is being reorganised and its old urls do not matter (yet). */
+		Off,
+
+		/** Only the renames made after {@link MoveMap#getSinceCommit()}. */
+		Since
+	}
 
 	@NonNull
 	private final File m_mapFile;
@@ -56,6 +77,14 @@ public class MoveMap {
 	/** The file's content as it was loaded, to detect whether it needs rewriting. */
 	@NonNull
 	private String m_loadedText = "";
+
+	/** Which renames to collect from git, from the '#moves' line. */
+	@NonNull
+	private Tracking m_tracking = Tracking.All;
+
+	/** For {@link Tracking#Since}: the commit to start collecting renames after. */
+	@Nullable
+	private String m_sinceCommit;
 
 	private int m_addedCount;
 
@@ -80,8 +109,12 @@ public class MoveMap {
 		for(String line : text.split("\n")) {
 			lineNumber++;
 			String trimmed = line.trim();
-			if(trimmed.isEmpty() || trimmed.startsWith("#"))
+			if(trimmed.isEmpty())
 				continue;
+			if(trimmed.startsWith("#")) {
+				map.parseDirectiveIf(trimmed, mapFile, lineNumber);
+				continue;
+			}
 			int tab = trimmed.indexOf('\t');
 			if(tab < 1 || tab == trimmed.length() - 1)
 				throw new MessageException(mapFile + "(" + lineNumber + "): expected '<old path><TAB><new path>' but got: " + line);
@@ -92,6 +125,51 @@ public class MoveMap {
 			map.m_moveMap.put(oldPath, newPath);
 		}
 		return map;
+	}
+
+	/**
+	 * Handle a comment line that is really the '#moves' directive: it decides
+	 * which of the renames git knows about are collected into this map. A site
+	 * that is being reorganised does not want any of them - its pages have not
+	 * been anywhere yet - and can switch collecting on once it has settled
+	 * down, from the commit it settled down at.
+	 */
+	private void parseDirectiveIf(@NonNull String line, @NonNull File mapFile, int lineNumber) {
+		String rest = line.substring(1).trim();							// Drop the '#'
+		if(!rest.toLowerCase().startsWith(DIRECTIVE.substring(1)))
+			return;														// An ordinary comment
+		rest = rest.substring(DIRECTIVE.length() - 1).trim();
+		String where = mapFile + "(" + lineNumber + "): ";
+		if(rest.equalsIgnoreCase("off")) {
+			m_tracking = Tracking.Off;
+		} else if(rest.equalsIgnoreCase("all") || rest.isEmpty()) {
+			m_tracking = Tracking.All;
+		} else if(rest.toLowerCase().startsWith("since")) {
+			String commit = rest.substring("since".length()).trim();
+			if(commit.isEmpty())
+				throw new MessageException(where + DIRECTIVE + " since: needs a commit to start collecting renames after");
+			m_tracking = Tracking.Since;
+			m_sinceCommit = commit;
+		} else {
+			throw new MessageException(where + "unknown '" + DIRECTIVE + "' option '" + rest + "'; expected off, all or since <commit>");
+		}
+	}
+
+	/**
+	 * Which of the renames git knows about should end up in this map.
+	 */
+	@NonNull
+	public Tracking getTracking() {
+		return m_tracking;
+	}
+
+	/**
+	 * The commit that {@link Tracking#Since} collects renames after, or null
+	 * when all of them (or none) are collected.
+	 */
+	@Nullable
+	public String getSinceCommit() {
+		return m_tracking == Tracking.Since ? m_sinceCommit : null;
 	}
 
 	/**
@@ -214,6 +292,18 @@ public class MoveMap {
 			return;
 		StringBuilder sb = new StringBuilder(HEADER.length() + m_moveMap.size() * 80);
 		sb.append(HEADER);
+		switch(m_tracking) {											// Keep the directive: it is the site's decision, not ours
+			default:
+				break;
+
+			case Off:
+				sb.append(DIRECTIVE).append(" off\n");
+				break;
+
+			case Since:
+				sb.append(DIRECTIVE).append(" since ").append(m_sinceCommit).append('\n');
+				break;
+		}
 		for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
 			sb.append(entry.getKey()).append('\t').append(entry.getValue()).append('\n');
 		}

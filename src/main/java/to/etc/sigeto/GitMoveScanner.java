@@ -38,6 +38,10 @@ final class GitMoveScanner {
 	 * (oldest first) order so that chained moves can be collapsed by replaying
 	 * them in sequence.
 	 *
+	 * When sinceCommit is given only the renames made after that commit are
+	 * returned: a site that was reorganised before it went live does not want
+	 * the urls it never published to be kept alive forever.
+	 *
 	 * Renames that are only staged are included, last, as they are the newest
 	 * ones. This matters for the pre-commit hook: when a move is about to be
 	 * committed it is in the index but not yet in the history, and without it
@@ -45,13 +49,22 @@ final class GitMoveScanner {
 	 * instead of being repaired.
 	 */
 	@NonNull
-	static List<Pair<String, String>> scanRenames(@NonNull File contentRoot) {
+	static List<Pair<String, String>> scanRenames(@NonNull File contentRoot, @Nullable String sinceCommit) {
 		String prefix = runGit(contentRoot, "rev-parse", "--show-prefix");
 		if(null == prefix)                                    // Not a repository, or no git at all
 			return Collections.emptyList();
 		prefix = prefix.trim();                                // "site/content/", or "" when content IS the repo root
 
-		String log = runGit(contentRoot, "log", "--reverse", "--diff-filter=R", "-M", "--name-status", "-z", "--format=", "--", ".");
+		String range = null;
+		if(null != sinceCommit) {
+			if(null == runGit(contentRoot, "rev-parse", "--verify", "--quiet", sinceCommit + "^{commit}"))
+				throw new MessageException(MoveMap.FILENAME + ": '#moves since " + sinceCommit + "' names a commit this repository does not have");
+			range = sinceCommit + "..HEAD";
+		}
+
+		String log = range == null
+			? runGit(contentRoot, "log", "--reverse", "--diff-filter=R", "-M", "--name-status", "-z", "--format=", "--", ".")
+			: runGit(contentRoot, "log", "--reverse", "--diff-filter=R", "-M", "--name-status", "-z", "--format=", range, "--", ".");
 		if(null == log)
 			return Collections.emptyList();
 		List<Pair<String, String>> renameList = new ArrayList<>(parseRenames(log, prefix));
@@ -122,6 +135,17 @@ final class GitMoveScanner {
 			return null;
 		String stripped = path.substring(prefix.length());
 		return stripped.isEmpty() ? null : stripped;
+	}
+
+	/**
+	 * The commit the content is currently at, abbreviated, or null when there
+	 * is no git repository at all. Used to tell the user which commit to start
+	 * collecting renames from once a reorganised site has settled down.
+	 */
+	@Nullable
+	static String currentCommit(@NonNull File contentRoot) {
+		String sha = runGit(contentRoot, "rev-parse", "--short", "HEAD");
+		return sha == null || sha.isBlank() ? null : sha.trim();
 	}
 
 	/**

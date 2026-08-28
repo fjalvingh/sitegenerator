@@ -77,7 +77,11 @@ public class Main {
 
 			//-- Find out which documents moved, so old urls and stale links can be handled
 			MoveMap moveMap = MoveMap.load(sourceRoot);
-			moveMap.mergeRenames(GitMoveScanner.scanRenames(contentRoot));
+			if(moveMap.getTracking() == MoveMap.Tracking.Off) {
+				reportMoveTrackingOff(contentRoot);
+			} else {
+				moveMap.mergeRenames(GitMoveScanner.scanRenames(contentRoot, moveMap.getSinceCommit()));
+			}
 			moveMap.resolve(content, errorList);
 			moveMap.saveIfChanged();
 
@@ -186,6 +190,19 @@ public class Main {
 			}
 			Util.copyFile(out, item.getFile());
 		}
+	}
+
+	/**
+	 * Say that renames are being ignored, and how to start collecting them
+	 * from this point on once the site has settled down. Printed every build
+	 * because forgetting that it is off is exactly how old urls get lost.
+	 */
+	private static void reportMoveTrackingOff(File contentRoot) {
+		String head = GitMoveScanner.currentCommit(contentRoot);
+		String hint = head == null
+			? ""
+			: " To start recording them from here on, make that line: #moves since " + head;
+		System.out.println("Move tracking is off ('#moves off' in " + MoveMap.FILENAME + "): git renames are ignored." + hint);
 	}
 
 	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {

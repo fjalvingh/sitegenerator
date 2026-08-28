@@ -187,6 +187,39 @@ If the content is not in a git repository nothing breaks; `redirects.tsv` is
 then the only source of moves, and a site that has never had one gets no file
 at all.
 
+### Which renames get collected
+
+A site that is still being built has no urls worth keeping: pages get moved
+around while its structure is worked out, and turning every one of those moves
+into a permanent redirect only preserves urls nobody ever used. A `#moves` line
+in `redirects.tsv` says which of the renames git knows about are collected:
+
+```
+#moves off              ignore all of them, while the site is being restructured
+#moves since <commit>   only the renames made after <commit>
+#moves all              every rename in the history (the default when the line is absent)
+```
+
+The line lives in `redirects.tsv` itself, so there is nothing else to keep in
+sync, and it survives the rewrites the generator does of that file. It only
+controls *collecting*: the moves already listed in the file keep producing
+their redirect pages and keep repairing stale source links whatever it says.
+
+While it is off every build prints the commit to start from once the structure
+has settled down:
+
+```
+Move tracking is off ('#moves off' in redirects.tsv): git renames are ignored. To start recording them from here on, make that line: #moves since 1029404
+```
+
+Replacing the line with that `#moves since <commit>` arms the tracking: the
+reshuffling before that commit stays ignored, every move after it is recorded
+as usual. A commit the repository does not have, or an option that is not one
+of the three, fails the build rather than silently collecting nothing.
+
+To turn tracking off for a site that has no `redirects.tsv` yet, create one
+containing just the `#moves off` line.
+
 To style the redirect pages, add a `redirect.jte` to `templates/`. It receives
 a `RedirectModel` with `getTargetHref()` (the link to the new location,
 relative to the old one) and `getTargetTitle()`. Without it a plain built-in
