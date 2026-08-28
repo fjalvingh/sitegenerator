@@ -1,8 +1,11 @@
 package to.etc.sigeto;
 
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +26,24 @@ public class Menu {
 		return m_root;
 	}
 
+	/**
+	 * The items at the top level of the menu. These are always shown, whatever
+	 * page is being rendered.
+	 */
+	@NonNull
+	public List<MenuItem> getRootItemList() {
+		return m_root.getSubItemList();
+	}
+
+	/**
+	 * The menu item representing the specified page, if that page is in the
+	 * menu at all (resources and hidden pages are not).
+	 */
+	@Nullable
+	public MenuItem findItem(@Nullable ContentItem item) {
+		return item == null ? null : m_itemMap.get(item);
+	}
+
 	static public Menu create(Content content) {
 		ContentLevel rootLevel = content.getPageRootLevel();
 		MenuItem rootItem = new MenuItem(null, rootLevel, rootLevel.getRootItem(), "root", "root", 0);
@@ -30,13 +51,14 @@ public class Menu {
 			.filter(a -> a.getName().startsWith("index"))
 			.findFirst().orElse(null);
 
-		generateMenuLevel(rootItem, index == null ? rootLevel : index);
-
-		return new Menu(rootItem);
+		Menu menu = new Menu(rootItem);
+		menu.generateMenuLevel(rootItem, index == null ? rootLevel : index);
+		return menu;
 	}
 
-	private static void generateMenuLevel(MenuItem rootItem, ContentLevel level) {
-		Set<ContentItem> subItems = new HashSet<>(level.getSubItems());
+	private void generateMenuLevel(MenuItem rootItem, ContentLevel level) {
+		Set<ContentItem> subItems = new LinkedHashSet<>(level.getSubItems());
+		subItems.remove(level.getRootItem());				// The level's own page is the menu item for this level, not a child of it
 		for(ContentLevel subLevel : level.getSubLevelList()) {
 			if(subLevel.hasMarkdown()) {
 				ContentItem item = subLevel.getRootItem();
@@ -62,8 +84,9 @@ public class Menu {
 		}
 	}
 
-	private static MenuItem createItemIf(MenuItem rootItem, ContentItem item, ContentLevel level) {
-		String title = item.getPageTitle();
+	@Nullable
+	private MenuItem createItemIf(MenuItem rootItem, ContentItem item, @Nullable ContentLevel level) {
+		String title = defaultTitle(item, level);
 		String sortTitle = title;
 
 		Object o = item.getFrontMatter().get("menu");
@@ -94,6 +117,7 @@ public class Menu {
 
 		MenuItem mi = new MenuItem(rootItem, level == null ? item.getLevel() : level, item, title, sortTitle, rootItem.getItemLevel() + 1);
 		rootItem.getSubItemList().add(mi);
+		m_itemMap.put(item, mi);
 
 		if(level != null && level.hasMarkdown()) {
 			generateMenuLevel(mi, level);
@@ -102,5 +126,17 @@ public class Menu {
 		return mi;
 	}
 
-
+	/**
+	 * The title to show for a page: the page's own title, or - for a page
+	 * without a title heading - the name of the thing it was made from, so
+	 * that a missing heading does not break the entire menu.
+	 */
+	@NonNull
+	private static String defaultTitle(ContentItem item, @Nullable ContentLevel level) {
+		String title = item.getPageTitle();
+		if(null != title && !title.isBlank()) {
+			return title;
+		}
+		return level == null ? Util.getFilenameSansExtension(item.getName()) : level.getName();
+	}
 }

@@ -29,6 +29,12 @@ public class PageModel {
 	@Nullable
 	private final String m_nextTitle;
 
+	/** Lazily resolved menu item for this page, see {@link #getCurrentMenuItem()}. */
+	@Nullable
+	private MenuItem m_currentMenuItem;
+
+	private boolean m_currentMenuItemResolved;
+
 	public PageModel(Content siteContent, String content, MarkdownChecker markdown, ContentItem item) {
 		this(siteContent, content, markdown, item, null, null, null, null);
 	}
@@ -97,28 +103,117 @@ public class PageModel {
 		return m_markdown.siteURL(url);
 	}
 
-	public boolean isCurrentItem(MenuItem item) {
+	/**
+	 * The menu item for the page being rendered, or - for a page that is not in
+	 * the menu itself, like a blog entry - the closest page above it that is.
+	 * Null when the page has nothing at all above it in the menu.
+	 */
+	@Nullable
+	public MenuItem getCurrentMenuItem() {
+		if(!m_currentMenuItemResolved) {
+			m_currentMenuItemResolved = true;
+			m_currentMenuItem = findCurrentMenuItem();
+		}
+		return m_currentMenuItem;
+	}
+
+	@Nullable
+	private MenuItem findCurrentMenuItem() {
+		Menu menu = getMenu();
+		MenuItem mi = menu.findItem(m_item);
+		if(null != mi) {
+			return mi;
+		}
+
+		//-- Not in the menu (hidden, or a blog entry): use the closest enclosing page that is
+		ContentLevel level = m_item.getLevel();
+		while(null != level) {
+			mi = menu.findItem(level.getRootItem());
+			if(null != mi) {
+				return mi;
+			}
+			level = level.getParentLevel();
+		}
+		return null;
+	}
+
+	public boolean isCurrentItem(@Nullable MenuItem item) {
 		if(null == item) {
 			return false;
 		}
 		return m_item == item.getItem();
 	}
 
-	public boolean mustShowItem(MenuItem menu) {
-		//if(m_item.getRelativePath().startsWith("index/pdp-11"))
-		//	System.out.println();
+	/**
+	 * T if the item is on the path from the menu root to the page being
+	 * rendered, so that its children need to be shown too.
+	 */
+	public boolean isOpenItem(@Nullable MenuItem item) {
+		if(null == item) {
+			return false;
+		}
+		if(item.isRoot()) {
+			return true;
+		}
+		MenuItem current = getCurrentMenuItem();
+		while(null != current) {
+			if(current == item) {
+				return true;
+			}
+			current = current.getParent();
+		}
+		return false;
+	}
+
+	/**
+	 * T if this item is part of the menu for the page being rendered: all top
+	 * level items are always there, and below that only the children of the
+	 * items on the path to the current page - so the page sees everything
+	 * above it, all of its siblings and its own children.
+	 */
+	public boolean mustShowItem(@Nullable MenuItem menu) {
 		if(null == menu) {
 			return false;
 		}
-		ContentItem menuItem = menu.getItem();
-		if(menuItem == null) {							// The root item contains all
+		MenuItem parent = menu.getParent();
+		if(null == parent) {							// The root item contains all
 			return true;
 		}
+		if(parent.isRoot()) {							// Top level items are always shown
+			return true;
+		}
+		return isOpenItem(parent);
+	}
 
-		ContentLevel currentItemLevel = m_item.getLevel();
+	/**
+	 * The link to a menu item's page, relative to the page being rendered.
+	 */
+	public String menuHref(MenuItem item) {
+		return siteURL(item.getTargetPath());
+	}
 
-		return menuItem.getLevel().isInside(currentItemLevel);
-		//return currentItemLevel.isInside(menuItem.getLevel());
+	/**
+	 * The link to the generated menu.json, for the javascript menu.
+	 */
+	public String getMenuJsonHref() {
+		return siteURL(MenuJsonWriter.FILE_NAME);
+	}
+
+	/**
+	 * The prefix that gets you from this page back to the site root, so that
+	 * javascript can make links out of the site root relative paths in
+	 * menu.json.
+	 */
+	public String getSiteRootHref() {
+		return siteURL("");
+	}
+
+	/**
+	 * The path of this page itself, relative to the site root - the form links
+	 * in menu.json have, so javascript can recognise the current page.
+	 */
+	public String getCurrentPagePath() {
+		return m_item.getRelativeTargetPath();
 	}
 
 	/**

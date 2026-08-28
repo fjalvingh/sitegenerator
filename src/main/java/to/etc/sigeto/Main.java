@@ -139,6 +139,9 @@ public class Main {
 				//-- Copy theme data
 				copyTemplateAssets(outputRoot, templateRoot);
 
+				//-- The menu as data, for sites that build their menu in the browser
+				MenuJsonWriter.write(outputRoot, content.getMenu());
+
 				//-- And keep the urls of everything that moved working
 				RedirectWriter.write(outputRoot, templateRoot, templateEngine, content, moveMap);
 			} finally {

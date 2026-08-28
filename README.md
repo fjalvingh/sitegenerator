@@ -235,9 +235,100 @@ An existing hook that this script did not write is never replaced without
 As always with git hooks, `git commit --no-verify` and `git push --no-verify`
 skip them.
 
+## The site menu
+
+After all content has been scanned and all page titles are known, the generator
+builds a menu tree from the content tree: one `MenuItem` per page, nested the
+way the content directories are nested, sorted by title. A page's front matter
+can adjust its entry:
+
+```
+---
+menu:
+  title: Short menu title      # instead of the page's own title
+  sort: 3 Short menu title     # sort under something else than the title
+  hidden: true                 # leave this page (and everything below it) out
+---
+```
+
+The menu shown on a page is always the same one, regardless of how it is
+rendered: **all top level items**, plus **the children of every item on the
+path from the top down to the page being shown** - so a page shows everything
+above it, all of its siblings, and its own sub-pages. The rest of the tree
+stays collapsed, which keeps the menu of a large site readable.
+
+Both ways of getting that menu into the site are always available - the
+generator hands the menu tree to every page *and* writes it to `menu.json` -
+so which one is used is entirely up to the site's templates.
+
+### Generated into the page
+
+`base.jte` generates the menu into every page itself, using the tree in the
+`PageModel`:
+
+```
+@template.menuitem(model, model.getMenuRoot())
+```
+
+with `menuitem.jte` walking the tree (see `testsite/templates/menuitem.jte`):
+
+- `model.getMenuRoot()` - the invisible root; its children are the top level
+  items, and its own page is the site's root page.
+- `item.getSubItemList()`, `item.getTitle()`, `item.hasChildren()`,
+  `item.getItemLevel()` - the tree itself.
+- `model.mustShowItem(item)` - is this item part of the menu for this page?
+- `model.isOpenItem(item)` - is it on the path to this page, i.e. do its
+  children need to be shown?
+- `model.isCurrentItem(item)` - is it the page being rendered?
+- `model.menuHref(item)` - the link to the item's page, relative to the page
+  being rendered.
+
+This needs no javascript and works on any static host, at the cost of a copy of
+the (visible part of the) menu inside every generated page.
+
+### Built in the browser
+
+The generator also writes the whole menu tree to `menu.json` in the output
+root:
+
+```json
+{
+  "items": [
+    {"title": "Amplifiers", "href": "amplifiers/index.html"},
+    {"title": "Digital (measurement) tools", "href": "digital-tools/index.html", "items": [
+      {"title": "HP 1600A Logic Analyzer", "href": "digital-tools/hp-1600a-logic-analyzer/index.html"}
+    ]}
+  ]
+}
+```
+
+The `href`s in it are relative to the site root. A template that wants this
+variant emits an empty container plus the script that fills it, instead of the
+generated menu:
+
+```
+<nav id="ui-menu" class="ui-menu" data-menu='${model.getMenuJsonHref()}'
+     data-root='${model.getSiteRootHref()}' data-current='${model.getCurrentPagePath()}'></nav>
+<script src='${model.siteURL("js/menu.js")}'></script>
+```
+
+- `model.getMenuJsonHref()` - the link to `menu.json` from this page.
+- `model.getSiteRootHref()` - the prefix that gets you from this page back to
+  the site root, to turn the paths in `menu.json` into links.
+- `model.getCurrentPagePath()` - this page's own site root relative path, so
+  the script can find it in the menu.
+
+`testsite/templates/js/menu.js` is an example of such a script; it builds the
+same menu the generated variant does. `testsite/templates/base.jte` shows how
+a template can keep both and switch between them with a single flag. Note that
+browsers do not allow
+`fetch()` on `file://` urls, so this variant has to be tested through a web
+server (`python3 -m http.server` in the output directory will do).
+
 ## Templates
 
 Templates are [jte](https://jte.gg/) files. `base.jte` is rendered once per
 content page and receives a `PageModel` with the rendered page content,
-breadcrumb path, page title, and site menu. Anything else under `templates/`
-(CSS, images, JS) is copied verbatim into the generated site.
+breadcrumb path, page title, and site menu (see "The site menu" above).
+Anything else under `templates/` (CSS, images, JS) is copied verbatim into the
+generated site.

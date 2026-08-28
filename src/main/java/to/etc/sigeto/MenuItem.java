@@ -44,6 +44,34 @@ final public class MenuItem {
 		return m_item;
 	}
 
+	/**
+	 * The item this one is nested under; null for the (invisible) menu root.
+	 */
+	@Nullable
+	public MenuItem getParent() {
+		return m_parent;
+	}
+
+	/**
+	 * T if this is the invisible root of the menu tree; its children are the
+	 * top level menu items.
+	 */
+	public boolean isRoot() {
+		return m_parent == null;
+	}
+
+	/**
+	 * The path of the generated page for this item, relative to the site root.
+	 */
+	@NonNull
+	public String getTargetPath() {
+		return m_item.getRelativeTargetPath();
+	}
+
+	public boolean hasChildren() {
+		return !m_subItemList.isEmpty();
+	}
+
 	public String getTitle() {
 		return m_title;
 	}

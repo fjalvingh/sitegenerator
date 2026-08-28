@@ -38,7 +38,15 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   against the `Content` model (build fails on dangling links), and extracts
   the page title from the first `#` heading.
 - `Menu.java` / `MenuItem.java` — builds the site navigation tree from
-  `Content` after the scan/check phase (`Content.complete()`).
+  `Content` after the scan/check phase (`Content.complete()`), one `MenuItem`
+  per page. Which part of that tree a page shows is decided by `PageModel`
+  (`mustShowItem`/`isOpenItem`/`isCurrentItem`), not by the tree itself, so
+  both menu variants show exactly the same menu.
+- `MenuJsonWriter.java` — writes `menu.json` (the whole menu tree, with site
+  root relative links) at the output root, for templates that build their menu
+  in the browser. It is always written: the generator offers both the tree and
+  the json, and the templates decide which one they use. See the "The site
+  menu" section of `README.md`.
 - `PageModel.java` — the object handed to `base.jte`; exposes rendered HTML,
   breadcrumbs, menu, and `siteURL()` for computing relative links from any
   page depth.
