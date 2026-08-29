@@ -99,6 +99,20 @@
 			<version>0.27.0</version>
 		</dependency>
 
+		<!--
+			PlantUML, for the "```plantuml" diagram blocks. The lgpl build is
+			the one that can be shipped inside the shaded jar: the default
+			net.sourceforge.plantuml:plantuml artifact is GPLv3, which does not
+			combine with this project's GPLv2. It brings no dependencies of its
+			own and falls back to its built-in Smetana layout engine when
+			Graphviz is not installed, so a build needs nothing extra.
+		-->
+		<dependency>
+			<groupId>net.sourceforge.plantuml</groupId>
+			<artifactId>plantuml-lgpl</artifactId>
+			<version>1.2026.7</version>
+		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/gg.jte/jte -->
 		<dependency>
 			<groupId>gg.jte</groupId>

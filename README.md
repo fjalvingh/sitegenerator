@@ -190,6 +190,66 @@ the file and the line: a silently missing application page looks like the
 documentation is broken. A width or height that is not a length is reported the
 same way.
 
+### Diagrams
+
+A fenced code block whose info string is `plantuml` is not shown as code: its
+content is handed to [PlantUML](https://plantuml.com/), and the diagram that
+comes out is written next to the page as an image file and embedded in its
+place.
+
+````
+```plantuml
+Alice -> Bob: Authentication request
+Bob --> Alice: Authentication response
+```
+````
+
+The `@startuml` and `@enduml` lines may be left out — the fence already says
+where the diagram starts and ends, and they are added back before PlantUML sees
+the source. Writing them yourself is fine too, and is what a diagram needs when
+it opens with something else (`@startmindmap`, `@startsalt`).
+
+After the word `plantuml` come the options, all of them optional:
+
+````
+```plantuml png title="The login handshake"
+```plantuml format=png
+````
+
+- the **image format**, as a bare `svg` or `png`, or as `format=svg` /
+  `format=png`. The default is **svg**: a diagram is line art, so it stays sharp
+  at any zoom and its file is smaller than the bitmap would be.
+- **`title="..."`** — what the diagram shows. It becomes the image's `alt` text
+  and its tooltip. Without it the `alt` text is "PlantUML diagram".
+
+The image is written into the same output directory as the page that uses it,
+named after that page: the second diagram on `data-binding.md` becomes
+`data-binding-uml2.svg`. The block renders as
+
+```html
+<div class="ui-uml"><img src="data-binding-uml2.svg" alt="..." width="640" height="480"></div>
+```
+
+with the diagram's own size in the attributes, scaled down proportionally when
+it is wider than 900 pixels, so the page does not jump about while the images
+load. The wrapping div is what the stylesheet gets to work with — give it
+`overflow-x: auto` to keep a wide diagram scrollable rather than squashed.
+
+A diagram PlantUML cannot parse is an error naming the file and **the line
+inside the block** the complaint is about, and it stops the build: publishing a
+page with PlantUML's error drawing on it would be worse. An option that is not
+an option is reported the same way.
+
+Diagrams are generated once per build no matter how often the same source
+appears, but they are the slowest thing the generator does — a site with a
+hundred diagrams takes noticeably longer than one without.
+
+PlantUML is bundled (the LGPL build, which is what can be shipped inside the
+shaded jar), so nothing needs installing. It uses [Graphviz](https://graphviz.org/)
+when `dot` is on the machine and falls back to its own built-in layout engine
+when it is not; the two lay class-like diagrams out slightly differently, but
+both work.
+
 ### Emoji
 
 GitHub-style `:shortcode:` emoji are supported, backed by

@@ -108,7 +108,7 @@ public class Main {
 			int mdFiles = 0;
 			int blogFiles = 0;
 			String includeBase = includeBase();
-			MarkdownChecker mc = new MarkdownChecker(content, moveMap, includeBase, variables(includeBase));
+			MarkdownChecker mc = new MarkdownChecker(content, outputRoot, moveMap, includeBase, variables(includeBase));
 			for(ContentItem item : markdownList) {
 				mc.scanContent(errorList, item);
 				if(item.getType() == ContentType.Page) {

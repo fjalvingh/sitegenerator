@@ -20,6 +20,10 @@ import to.etc.sigeto.demos.DemoBlock;
 import to.etc.sigeto.demos.DemoExtension;
 import to.etc.sigeto.emojis.EmojiExtension;
 import to.etc.sigeto.notifications.NotificationsExtension;
+import to.etc.sigeto.plantuml.PlantumlBlock;
+import to.etc.sigeto.plantuml.PlantumlExtension;
+import to.etc.sigeto.plantuml.PlantumlImage;
+import to.etc.sigeto.plantuml.PlantumlRenderCache;
 import to.etc.sigeto.tables.MyTablesExtension;
 import to.etc.sigeto.tocextension.TocExtension;
 import to.etc.sigeto.utils.Pair;
@@ -81,6 +85,14 @@ public class MarkdownChecker {
 	@Nullable
 	private final String m_includeBase;
 
+	/** The root of the generated site, where the diagrams of "```plantuml" blocks are written. */
+	@NonNull
+	private final File m_outputRoot;
+
+	/** The diagrams generated so far, which the check and the render phase share. */
+	@NonNull
+	private final PlantumlRenderCache m_plantumlCache = new PlantumlRenderCache();
+
 	/** What a "${name}" variable stands for; returns null for a name that is not defined. */
 	@NonNull
 	private final Function<String, String> m_variables;
@@ -97,8 +109,9 @@ public class MarkdownChecker {
 	 */
 	private final Map<Node, List<String>> m_unknownUrlVariableMap = new IdentityHashMap<>();
 
-	public MarkdownChecker(Content content, @NonNull MoveMap moveMap, @Nullable String includeBase, @NonNull Function<String, String> variables) {
+	public MarkdownChecker(Content content, @NonNull File outputRoot, @NonNull MoveMap moveMap, @Nullable String includeBase, @NonNull Function<String, String> variables) {
 		m_content = content;
+		m_outputRoot = outputRoot;
 		m_moveMap = moveMap;
 		m_includeBase = includeBase;
 		m_variables = variables;
@@ -116,6 +129,7 @@ public class MarkdownChecker {
 			NotificationsExtension.create(),
 			EmojiExtension.create(),
 			DemoExtension.create(includeBase),
+			PlantumlExtension.create(m_plantumlCache),
 			VariableExtension.create(variables)
 		);
 
@@ -158,6 +172,7 @@ public class MarkdownChecker {
 
 		List<Extension> extList = new ArrayList<>(m_extList);
 		extList.add(BlogExtension.create(item, outputDir));
+		extList.add(PlantumlExtension.create(m_plantumlCache, m_outputRoot, outputDir, Util.getFilenameSansExtension(item.getName())));
 		HtmlRenderer renderer = HtmlRenderer.builder()
 			.extensions(extList)
 			.nodeRendererFactory(ctx -> new MdImgRenderer(item, outputDir, ctx))
@@ -290,6 +305,8 @@ public class MarkdownChecker {
 			checkImage((Image) node);
 		} else if(node instanceof DemoBlock) {
 			checkDemo((DemoBlock) node);
+		} else if(node instanceof PlantumlBlock) {
+			checkPlantuml((PlantumlBlock) node);
 		} else if(node instanceof VariableNode) {
 			checkVariable((VariableNode) node);
 		} else if(node instanceof Heading) {
@@ -334,6 +351,40 @@ public class MarkdownChecker {
 		if(null != problem) {
 			m_errorList.add(new Message(m_currentItem, lineNumber(demo), MsgType.Error, problem));
 		}
+	}
+
+	/**
+	 * Generate the diagram of a "```plantuml" block now, so that a diagram
+	 * PlantUML cannot make anything of stops the build naming the line it is
+	 * on - rather than publishing a page with PlantUML's error drawing on it.
+	 * The generated image is kept, so rendering the page does not redo it.
+	 */
+	private void checkPlantuml(PlantumlBlock block) {
+		String problem = block.getOptionError();
+		if(null != problem) {
+			m_errorList.add(new Message(m_currentItem, lineNumber(block), MsgType.Error, problem));
+			return;
+		}
+		PlantumlImage image = m_plantumlCache.getImage(block);
+		String error = image.getError();
+		if(null == error)
+			return;
+		m_errorList.add(new Message(m_currentItem, plantumlLine(block, image), MsgType.Error, PlantumlBlock.INFO_WORD + ": " + error));
+	}
+
+	/**
+	 * The line in the source file the diagram's error is on: the line inside
+	 * the block PlantUML complains about, mapped back over the fence line and
+	 * the "@startuml" that was added when the block did not have one. Falls
+	 * back to the block's own line when the error is not about one line.
+	 */
+	private int plantumlLine(PlantumlBlock block, PlantumlImage image) {
+		int blockLine = lineNumber(block);
+		int errorLine = image.getErrorLine();
+		if(blockLine == 0 || errorLine == PlantumlImage.NO_LINE)
+			return blockLine;
+		int line = blockLine + 1 + errorLine - block.getPrefixLines();
+		return line < blockLine ? blockLine : line;
 	}
 
 	private void checkImage(Image image) {

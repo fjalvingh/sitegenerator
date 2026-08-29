@@ -70,6 +70,15 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
     `src/main/resources/emoji/emoji.csv`.
   - `tables/` — GFM table rendering.
   - `blogextension/` — blog-entry-specific parsing/rendering.
+  - `demos/` — `!demo(path)` iframe showing a page of the live application.
+  - `variables/` — `${name}` variables, defined with `-D` on the command line.
+  - `plantuml/` — ` ```plantuml ` fenced blocks, rendered to an svg/png file
+    next to the page by the bundled PlantUML. This one hooks in through a
+    `PostProcessor` rather than a block parser (commonmark already knows how to
+    find a fenced block), and its renderer half is created per page because it
+    writes files into that page's output directory; `PlantumlRenderCache` is
+    shared between the check and the render phase so each distinct diagram is
+    generated only once.
 - `Util.java` — file IO helpers (copy, empty-dir, string IO).
 - `install-hooks.sh` + `githooks/sigeto-check.sh` — installs and implements the
   `pre-commit` / `pre-push` hooks for a *site* repository (not this one), which
