@@ -31,7 +31,10 @@ java -jar target/sitegen-jar-with-dependencies.jar -i <site-root> [-o <output-di
   `<site-root>/_output`. The output directory is emptied before each run.
 - `-include` (optional): the base URL that `!demo(path)` tags are resolved
   against, e.g. `https://demo.example.org/demo`. Only needed by a site that
-  uses those tags; see "Embedded application pages" below.
+  uses those tags; see "Embedded application pages" below. It also defines the
+  `${demo}` variable, see "Variables" below.
+- `-Dname=value` (optional, repeatable): defines a variable the documentation
+  can use as `${name}`. `-D name=value` works as well.
 
 The `testsite/` directory in this repository is a full example site (the
 author's real site content) and can be used to try the generator out, e.g.:
@@ -98,6 +101,35 @@ and `menu: { hidden: true }` excludes a page from the generated site menu.
 
 A page's title is taken from the first `# heading` (h1) found in the
 document. Don't use more than one h1 per page.
+
+### Variables
+
+`${name}` is replaced by whatever the build says the name stands for, verbatim:
+
+```
+The application lives at ${demo}, and its [home page](${demo}HomePage.ui) looks
+like this. This is version ${release}.
+```
+
+Values come from the command line - `-Dname=value`, repeatable - plus `demo`,
+which is the `-include` base url. Defining `demo` with `-D` as well is an error:
+it has to keep meaning the same thing as it does in a `!demo()` tag. There is no
+other source of values: variables are a build parameter, not page metadata.
+
+Variables work in the text of a page and in link and image urls (including
+their titles, the `<...>` form and `[ref]: url` definitions). A url is expanded
+before it is checked, so `[x](${demo}HomePage.ui)` is an external link that is
+left alone, while a variable expanding to a path inside `content/` is checked
+and rewritten like any other internal link.
+
+A name may contain letters, digits, `.`, `-` and `_`; anything else is not a
+variable and is left alone, as is a `${` that is never closed. `${name}` inside
+a code span or a code block is left alone too, and `\${name}` is the escape for
+a `${` that is meant literally in running text.
+
+A variable that is not defined is an error naming the file and the line, and
+the build stops - a page silently showing a bare `${name}`, or a hole where a
+url should be, looks like the documentation is broken.
 
 ### Table of contents
 

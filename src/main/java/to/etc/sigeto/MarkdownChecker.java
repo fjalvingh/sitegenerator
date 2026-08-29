@@ -23,6 +23,9 @@ import to.etc.sigeto.notifications.NotificationsExtension;
 import to.etc.sigeto.tables.MyTablesExtension;
 import to.etc.sigeto.tocextension.TocExtension;
 import to.etc.sigeto.utils.Pair;
+import to.etc.sigeto.variables.VariableExpander;
+import to.etc.sigeto.variables.VariableExtension;
+import to.etc.sigeto.variables.VariableNode;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,9 +33,11 @@ import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class MarkdownChecker {
 	@NonNull
@@ -76,10 +81,27 @@ public class MarkdownChecker {
 	@Nullable
 	private final String m_includeBase;
 
-	public MarkdownChecker(Content content, @NonNull MoveMap moveMap, @Nullable String includeBase) {
+	/** What a "${name}" variable stands for; returns null for a name that is not defined. */
+	@NonNull
+	private final Function<String, String> m_variables;
+
+	/**
+	 * For every link or image in the document last parsed that used a variable
+	 * in its url: the url as it is written in the source file.
+	 */
+	private final Map<Node, String> m_sourceUrlMap = new IdentityHashMap<>();
+
+	/**
+	 * For every link or image in the document last parsed whose url used
+	 * variables that are not defined: those names.
+	 */
+	private final Map<Node, List<String>> m_unknownUrlVariableMap = new IdentityHashMap<>();
+
+	public MarkdownChecker(Content content, @NonNull MoveMap moveMap, @Nullable String includeBase, @NonNull Function<String, String> variables) {
 		m_content = content;
 		m_moveMap = moveMap;
 		m_includeBase = includeBase;
+		m_variables = variables;
 		//options.set(Parser.EXTENSIONS, Arrays.asList(
 		//	TypographicExtension.create(),
 		//	SuperscriptExtension.create(),
@@ -93,7 +115,8 @@ public class MarkdownChecker {
 			HeadingAnchorExtension.create(),
 			NotificationsExtension.create(),
 			EmojiExtension.create(),
-			DemoExtension.create(includeBase)
+			DemoExtension.create(includeBase),
+			VariableExtension.create(variables)
 		);
 
 		List<Extension> extList = new ArrayList<>(m_extList);
@@ -251,6 +274,11 @@ public class MarkdownChecker {
 		//-- Parse frontmatter if present
 		m_lineOffset = skippedLines;
 		Node doc = m_parser.parse(markdown.toString());
+
+		//-- Urls are not part of the inline parse, so expand their variables here, before anything uses them
+		m_sourceUrlMap.clear();
+		m_unknownUrlVariableMap.clear();
+		doc.accept(new VariableExpander(m_variables, m_sourceUrlMap, m_unknownUrlVariableMap));
 		return new Pair<>(doc, yaml.toString());
 	}
 
@@ -262,6 +290,8 @@ public class MarkdownChecker {
 			checkImage((Image) node);
 		} else if(node instanceof DemoBlock) {
 			checkDemo((DemoBlock) node);
+		} else if(node instanceof VariableNode) {
+			checkVariable((VariableNode) node);
 		} else if(node instanceof Heading) {
 			Heading heading = (Heading) node;
 			if(m_currentItem.getPageTitle() == null) {
@@ -269,6 +299,21 @@ public class MarkdownChecker {
 				m_currentItem.setPageTitle(hdr);
 			}
 		}
+	}
+
+	/**
+	 * A variable that is not defined would leave a literal "${name}" on the
+	 * page, which looks like the documentation is broken - so it stops the
+	 * build, naming the file and the line, the way a dangling link does.
+	 */
+	private void checkVariable(VariableNode variable) {
+		if(null == m_variables.apply(variable.getName())) {
+			m_errorList.add(new Message(m_currentItem, lineNumber(variable), MsgType.Error, unknownVariable(variable.getName())));
+		}
+	}
+
+	private static String unknownVariable(String name) {
+		return "unknown variable ${" + name + "}: define it with -D" + name + "=<value>";
 	}
 
 	/**
@@ -292,6 +337,8 @@ public class MarkdownChecker {
 	}
 
 	private void checkImage(Image image) {
+		if(reportUnknownUrlVariables(image, "Image"))
+			return;
 		checkReference(image, image.getDestination(), "Image");
 	}
 
@@ -300,7 +347,25 @@ public class MarkdownChecker {
 	 * replace it with a html link to the generated page.
 	 */
 	private void checkLink(Link link) {
+		if(reportUnknownUrlVariables(link, "Link"))
+			return;
 		checkReference(link, link.getDestination(), "Link");
+	}
+
+	/**
+	 * Report the variables used in this node's url that are not defined, and
+	 * say whether there were any. The url cannot be resolved when there are,
+	 * so it is not checked any further: that would only add a second,
+	 * confusing error about a document that does not exist.
+	 */
+	private boolean reportUnknownUrlVariables(Node node, String kind) {
+		List<String> unknownList = m_unknownUrlVariableMap.get(node);
+		if(null == unknownList)
+			return false;
+		for(String name : unknownList) {
+			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error, kind + " url uses " + unknownVariable(name)));
+		}
+		return true;
 	}
 
 	private void checkReference(Node node, String url, String kind) {
@@ -324,16 +389,28 @@ public class MarkdownChecker {
 	 * site is published.
 	 */
 	private void checkMovedReference(Node node, String url, String path, String kind) {
+		String sourceUrl = sourceUrl(node, url);
 		String target = m_moveMap.getTarget(path);
 		if(null == target) {
-			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error, kind + " link to unknown document: " + url));
+			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error, kind + " link to unknown document: " + sourceUrl));
 			return;
 		}
 
 		String newUrl = moveURL(url, target);
-		m_linkFixList.add(new LinkFix(m_currentItem, lineNumber(node), url, newUrl));
+		m_linkFixList.add(new LinkFix(m_currentItem, lineNumber(node), sourceUrl, newUrl));
 		m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error,
-			kind + " link to moved document: " + url + " is now at " + newUrl + " (fixed in the source; review and commit it)"));
+			kind + " link to moved document: " + sourceUrl + " is now at " + newUrl + " (fixed in the source; review and commit it)"));
+	}
+
+	/**
+	 * The url the way it is actually written in the source file, which is not
+	 * the one in the parsed document when it used a variable. An error has to
+	 * name what the author wrote, and {@link SourceLinkFixer} has to be able
+	 * to find it back in the file.
+	 */
+	private String sourceUrl(Node node, String url) {
+		String source = m_sourceUrlMap.get(node);
+		return null == source ? url : source;
 	}
 
 	/**

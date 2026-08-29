@@ -5,17 +5,23 @@ import gg.jte.TemplateEngine;
 import gg.jte.TemplateOutput;
 import gg.jte.output.StringOutput;
 import gg.jte.resolve.DirectoryCodeResolver;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.kohsuke.args4j.spi.MapOptionHandler;
+import to.etc.sigeto.variables.Variables;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -27,6 +33,13 @@ public class Main {
 
 	@Option(name = "-include", usage = "Base URL that the paths in !demo(path) tags are resolved against, like https://demo.example.org/demo")
 	private String m_includeBase;
+
+	@Option(name = "-D", metaVar = "name=value", handler = MapOptionHandler.class,
+		usage = "Define a variable the documentation can use as ${name}; may be repeated")
+	private Map<String, String> m_variableMap = new LinkedHashMap<>();
+
+	/** The variable that stands for the -include base url. */
+	private static final String DEMO_VARIABLE = "demo";
 
 	static public void main(String[] args) {
 		try {
@@ -41,7 +54,7 @@ public class Main {
 		CmdLineParser p = new CmdLineParser(this);
 		try {
 			//-- Decode the tasks's arguments
-			p.parseArgument(args);
+			p.parseArgument(splitDefines(args));
 		} catch(CmdLineException x) {
 			System.err.println("Invalid arguments: " + x.getMessage());
 			p.printUsage(System.err);
@@ -94,7 +107,8 @@ public class Main {
 				.collect(Collectors.toList());
 			int mdFiles = 0;
 			int blogFiles = 0;
-			MarkdownChecker mc = new MarkdownChecker(content, moveMap, includeBase());
+			String includeBase = includeBase();
+			MarkdownChecker mc = new MarkdownChecker(content, moveMap, includeBase, variables(includeBase));
 			for(ContentItem item : markdownList) {
 				mc.scanContent(errorList, item);
 				if(item.getType() == ContentType.Page) {
@@ -224,6 +238,45 @@ public class Main {
 		if(!base.toLowerCase().startsWith("http://") && !base.toLowerCase().startsWith("https://"))
 			throw new MessageException("-include " + base + ": the base url must start with http:// or https://");
 		return base;
+	}
+
+	/**
+	 * What the "${name}" variables in the documentation stand for: whatever
+	 * was defined with -D, plus "demo" for the -include base url, so that a
+	 * link into the demo application is written the same way a !demo() tag is
+	 * - without hard-coding which installation it points at.
+	 */
+	@NonNull
+	private Function<String, String> variables(@Nullable String includeBase) {
+		Map<String, String> map = new LinkedHashMap<>();
+		for(Map.Entry<String, String> entry : m_variableMap.entrySet()) {
+			String name = entry.getKey();
+			if(!Variables.isValidName(name))
+				throw new MessageException("-D" + name + "=...: a variable name can only contain letters, digits, '.', '-' and '_'");
+			map.put(name, entry.getValue());
+		}
+		if(null != includeBase) {
+			if(null != map.put(DEMO_VARIABLE, includeBase))
+				throw new MessageException("-D" + DEMO_VARIABLE + "=...: ${" + DEMO_VARIABLE + "} is the -include base url, so it cannot be defined as well");
+		}
+		return map::get;
+	}
+
+	/**
+	 * Accept "-Dname=value" as well as the "-D name=value" that args4j knows,
+	 * because the glued form is the one everybody types.
+	 */
+	private static String[] splitDefines(String[] args) {
+		List<String> list = new ArrayList<>(args.length + 2);
+		for(String arg : args) {
+			if(arg.startsWith("-D") && arg.length() > 2) {
+				list.add("-D");
+				list.add(arg.substring(2));
+			} else {
+				list.add(arg);
+			}
+		}
+		return list.toArray(new String[list.size()]);
 	}
 
 	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
