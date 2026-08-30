@@ -28,6 +28,7 @@ import to.etc.sigeto.tables.MyTablesExtension;
 import to.etc.sigeto.tocextension.TocExtension;
 import to.etc.sigeto.utils.Pair;
 import to.etc.sigeto.variables.VariableExpander;
+import to.etc.sigeto.variables.VariableFile;
 import to.etc.sigeto.variables.VariableExtension;
 import to.etc.sigeto.variables.VariableNode;
 
@@ -81,7 +82,7 @@ public class MarkdownChecker {
 
 	private TextContentRenderer m_textRenderer = new TextContentRenderer.Builder().build();
 
-	/** The -include base url that "!demo(path)" tags resolve against, null when the build got none. */
+	/** The ${demo} base url that "!demo(path)" tags resolve against, null when the site defined none. */
 	@Nullable
 	private final String m_includeBase;
 
@@ -330,18 +331,18 @@ public class MarkdownChecker {
 	}
 
 	private static String unknownVariable(String name) {
-		return "unknown variable ${" + name + "}: define it with -D" + name + "=<value>";
+		return "unknown variable ${" + name + "}: define it in " + VariableFile.FILENAME + " in the site root, or with -D" + name + "=<value>";
 	}
 
 	/**
 	 * A "!demo(path)" tag can only be rendered when the build knows what to
-	 * resolve its path against, so a page using one without -include is an
-	 * error - silently leaving a hole in the page would be worse.
+	 * resolve its path against, so a page using one in a site that defines no
+	 * ${demo} is an error - silently leaving a hole in the page would be worse.
 	 */
 	private void checkDemo(DemoBlock demo) {
 		if(null == m_includeBase) {
 			m_errorList.add(new Message(m_currentItem, lineNumber(demo), MsgType.Error,
-				"!demo(" + demo.getPath() + ") needs a base url for the application: run the generator with -include <url>"));
+				"!demo(" + demo.getPath() + ") needs a base url for the application: define 'demo=<url>' in " + VariableFile.FILENAME + " in the site root"));
 			return;
 		}
 		String problem = DemoBlock.checkSize(demo.getWidth(), "width");

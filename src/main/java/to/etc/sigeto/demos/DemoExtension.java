@@ -11,7 +11,7 @@ import org.eclipse.jdt.annotation.Nullable;
  * {@link DemoBlock} for how the url is made.
  */
 public class DemoExtension implements Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
-	/** The base url the paths in the tags are resolved against, from -include; null when the build got none. */
+	/** The base url the paths in the tags are resolved against, from ${demo}; null when the site defined none. */
 	@Nullable
 	private final String m_includeBase;
 

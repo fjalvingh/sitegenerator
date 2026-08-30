@@ -9,7 +9,7 @@ import org.eclipse.jdt.annotation.Nullable;
  * belongs with the documentation, at "&lt;include base&gt;/&lt;path&gt;".
  *
  * The include base is not known to the markdown at all - it is a property of
- * the build (the -include option), because the same documentation is built
+ * the site (the ${demo} variable), because the same documentation is built
  * against different installations of the application it describes.
  */
 public class DemoBlock extends CustomBlock {

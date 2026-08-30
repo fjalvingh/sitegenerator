@@ -20,7 +20,7 @@ import java.util.Set;
 public class DemoRenderer implements NodeRenderer {
 	private final HtmlWriter m_writer;
 
-	/** The -include base url, or null when the build did not get one. */
+	/** The ${demo} base url, or null when the site defined none. */
 	@Nullable
 	private final String m_includeBase;
 

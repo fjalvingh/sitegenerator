@@ -29,12 +29,12 @@ java -jar target/sitegen-jar-with-dependencies.jar -i <site-root> [-o <output-di
   "Site layout" below).
 - `-o` / `-output` (optional): where to write the generated site. Defaults to
   `<site-root>/_output`. The output directory is emptied before each run.
-- `-include` (optional): the base URL that `!demo(path)` tags are resolved
-  against, e.g. `https://demo.example.org/demo`. Only needed by a site that
-  uses those tags; see "Embedded application pages" below. It also defines the
-  `${demo}` variable, see "Variables" below.
 - `-Dname=value` (optional, repeatable): defines a variable the documentation
-  can use as `${name}`. `-D name=value` works as well.
+  can use as `${name}`, overriding the site's own `variables.properties`.
+  `-D name=value` works as well. See "Variables" below.
+
+Everything else the build needs is in the site itself, so a plain
+`-i <site-root>` is the whole command line for a normal build.
 
 The `testsite/` directory in this repository is a full example site (the
 author's real site content) and can be used to try the generator out, e.g.:
@@ -62,6 +62,7 @@ A site source directory (the `-i` argument) must contain two subdirectories:
     redirect.jte       optional template for moved-document redirect pages
     css/, img/, ...     copied verbatim into the output root
   redirects.tsv       the record of moved documents (generated, commit it)
+  variables.properties  what the ${name} variables stand for (optional, commit it)
 ```
 
 Rules:
@@ -111,10 +112,30 @@ The application lives at ${demo}, and its [home page](${demo}HomePage.ui) looks
 like this. This is version ${release}.
 ```
 
-Values come from the command line - `-Dname=value`, repeatable - plus `demo`,
-which is the `-include` base url. Defining `demo` with `-D` as well is an error:
-it has to keep meaning the same thing as it does in a `!demo()` tag. There is no
-other source of values: variables are a build parameter, not page metadata.
+Values come from `variables.properties` in the site root, one `name=value` per
+line:
+
+```
+# What ${name} stands for; '#' starts a comment line.
+demo=https://demo.example.org/demo
+release=2.1
+```
+
+The value is the rest of the line, trimmed, taken exactly as it is written -
+there are no escapes and no continuation lines, and the file is read as UTF-8.
+A name may be defined only once. The file is optional; a site using no
+variables needs none.
+
+What a variable stands for is a property of the site, not of whoever runs the
+generator, which is why it is a committed file rather than an option every run
+has to repeat. `-Dname=value` on the command line overrides the file for one
+build - that is how the same site is built against another installation of the
+application it documents. There is no other source of values: variables are a
+build parameter, not page metadata.
+
+One name has a meaning to the generator itself: `demo` is the base url the
+`!demo()` tags resolve against, see "Embedded application pages" below. It has
+to be an `http://` or `https://` url.
 
 Variables work in the text of a page and in link and image urls (including
 their titles, the `<...>` form and `[ref]: url` definitions). A url is expanded
@@ -165,11 +186,11 @@ iframe showing one page of the live application:
 !demo(to.etc.domuidemo.pages.HomePage.ui, 100%)
 ```
 
-The path in the tag is appended to the `-include` base url, with exactly one
+The path in the tag is appended to the `${demo}` base url, with exactly one
 slash between the two, so the documentation does not hard-code which
 installation it is shown against - a local build, the public demo and a
-customer's acceptance server are all the same source with a different
-`-include`. A path that is a full `http(s)://` url is used as it is written.
+customer's acceptance server are all the same source with a different `demo`
+value. A path that is a full `http(s)://` url is used as it is written.
 
 After the path come the width and then the height, both optional: a bare number
 is pixels, anything else is used as a css length (`100%`, `40em`). Leaving one
@@ -185,9 +206,9 @@ so the stylesheet decides what happens on a screen narrower than the frame -
 the wrapping div is there to be given `overflow-x: auto`, which keeps the
 application at the size it is being demonstrated at instead of squashing it.
 
-A page that uses `!demo()` in a build without `-include` is an error, naming
-the file and the line: a silently missing application page looks like the
-documentation is broken. A width or height that is not a length is reported the
+A page that uses `!demo()` in a site that defines no `demo` variable is an
+error, naming the file and the line: a silently missing application page looks
+like the documentation is broken. A width or height that is not a length is reported the
 same way.
 
 ### Diagrams
@@ -435,13 +456,13 @@ sitegenerator/install-hooks.sh [--repo <dir>] [--site-root <dir>]
                               [--output <dir>] [--force] [--uninstall]
 ```
 
-Generator options the site needs are passed in `SIGETO_ARGS`, which matters for
-a site using `!demo()` tags: without its `-include` base url the hook's build
-fails on every one of them. Put it where the hook will see it, e.g. in the
-repository's `.git/hooks` environment or your shell profile:
+The hook needs no options of its own: everything the build needs is in the site
+directory it is given. Extra generator options can still be passed in the
+`SIGETO_ARGS` environment variable, put where the hook will see it (the
+repository's `.git/hooks` environment, or your shell profile):
 
 ```
-export SIGETO_ARGS='-include https://demo.example.org/demo'
+export SIGETO_ARGS='-Drelease=2.2-SNAPSHOT'
 ```
 
 An existing hook that this script did not write is never replaced without

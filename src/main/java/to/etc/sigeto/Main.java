@@ -12,6 +12,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.MapOptionHandler;
 import to.etc.sigeto.utils.Pair;
+import to.etc.sigeto.variables.VariableFile;
 import to.etc.sigeto.variables.Variables;
 
 import java.io.File;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -32,14 +32,11 @@ public class Main {
 	@Option(name = "-o", aliases = {"-output"}, usage = "The output directory, default is _output in the site root")
 	private String m_outputRoot;
 
-	@Option(name = "-include", usage = "Base URL that the paths in !demo(path) tags are resolved against, like https://demo.example.org/demo")
-	private String m_includeBase;
-
 	@Option(name = "-D", metaVar = "name=value", handler = MapOptionHandler.class,
-		usage = "Define a variable the documentation can use as ${name}; may be repeated")
+		usage = "Define a variable the documentation can use as ${name}, overriding " + VariableFile.FILENAME + "; may be repeated")
 	private Map<String, String> m_variableMap = new LinkedHashMap<>();
 
-	/** The variable that stands for the -include base url. */
+	/** The variable that stands for the base url the "!demo(path)" tags resolve against. */
 	private static final String DEMO_VARIABLE = "demo";
 
 	static public void main(String[] args) {
@@ -120,8 +117,9 @@ public class Main {
 				.collect(Collectors.toList());
 			int mdFiles = 0;
 			int blogFiles = 0;
-			String includeBase = includeBase();
-			MarkdownChecker mc = new MarkdownChecker(content, outputRoot, moveMap, includeBase, variables(includeBase));
+			Map<String, String> variableMap = variables(sourceRoot);
+			String includeBase = demoBase(variableMap);
+			MarkdownChecker mc = new MarkdownChecker(content, outputRoot, moveMap, includeBase, variableMap::get);
 			for(ContentItem item : markdownList) {
 				mc.scanContent(errorList, item);
 				if(item.getType() == ContentType.Page) {
@@ -236,43 +234,42 @@ public class Main {
 	}
 
 	/**
-	 * The base url for the "!demo(path)" tags, checked as far as it can be:
-	 * whether it actually serves anything is only known at the moment someone
-	 * looks at the page.
-	 */
-	@Nullable
-	private String includeBase() {
-		String base = m_includeBase;
-		if(null == base)
-			return null;
-		base = base.trim();
-		if(base.isEmpty())
-			throw new MessageException("-include: the base url is empty");
-		if(!base.toLowerCase().startsWith("http://") && !base.toLowerCase().startsWith("https://"))
-			throw new MessageException("-include " + base + ": the base url must start with http:// or https://");
-		return base;
-	}
-
-	/**
-	 * What the "${name}" variables in the documentation stand for: whatever
-	 * was defined with -D, plus "demo" for the -include base url, so that a
-	 * link into the demo application is written the same way a !demo() tag is
-	 * - without hard-coding which installation it points at.
+	 * What the "${name}" variables in the documentation stand for: the site's
+	 * own definitions in {@link VariableFile}, with whatever the command line
+	 * defined with -D on top of them - so that the same site can be built
+	 * against another installation without editing the file it commits.
 	 */
 	@NonNull
-	private Function<String, String> variables(@Nullable String includeBase) {
-		Map<String, String> map = new LinkedHashMap<>();
+	private Map<String, String> variables(@NonNull File siteRoot) throws Exception {
+		Map<String, String> map = VariableFile.load(siteRoot);
 		for(Map.Entry<String, String> entry : m_variableMap.entrySet()) {
 			String name = entry.getKey();
 			if(!Variables.isValidName(name))
 				throw new MessageException("-D" + name + "=...: a variable name can only contain letters, digits, '.', '-' and '_'");
 			map.put(name, entry.getValue());
 		}
-		if(null != includeBase) {
-			if(null != map.put(DEMO_VARIABLE, includeBase))
-				throw new MessageException("-D" + DEMO_VARIABLE + "=...: ${" + DEMO_VARIABLE + "} is the -include base url, so it cannot be defined as well");
-		}
-		return map::get;
+		return map;
+	}
+
+	/**
+	 * The base url the "!demo(path)" tags resolve against: the ${demo}
+	 * variable, checked as far as it can be - whether it actually serves
+	 * anything is only known at the moment someone looks at the page. A site
+	 * using no !demo() tags needs no ${demo}, so a missing one is not an error
+	 * here but at the tag that needs it.
+	 */
+	@Nullable
+	private static String demoBase(@NonNull Map<String, String> variableMap) {
+		String base = variableMap.get(DEMO_VARIABLE);
+		if(null == base)
+			return null;
+		base = base.trim();
+		if(base.isEmpty())
+			throw new MessageException("${" + DEMO_VARIABLE + "}: the base url of the application is empty");
+		if(!base.toLowerCase().startsWith("http://") && !base.toLowerCase().startsWith("https://"))
+			throw new MessageException("${" + DEMO_VARIABLE + "} " + base + ": the base url of the application must start with http:// or https://");
+		variableMap.put(DEMO_VARIABLE, base);						// The tags and ${demo} must mean the same thing
+		return base;
 	}
 
 	/**

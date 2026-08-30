@@ -13,9 +13,10 @@
 #                      templates/ (relative to the repository root)
 #   sigeto.output      optional output directory, default <siteroot>/_output
 #
-# Extra generator options can be passed in the SIGETO_ARGS environment
-# variable; a site using !demo() tags needs its -include base url there, e.g.
-# SIGETO_ARGS='-include https://demo.example.org/demo'.
+# The hook needs no generator options: what the build needs is in the site
+# itself (variables.properties next to content/). Extra options can still be
+# passed in the SIGETO_ARGS environment variable, e.g.
+# SIGETO_ARGS='-Drelease=2.2-SNAPSHOT'.
 #
 set -u
 
