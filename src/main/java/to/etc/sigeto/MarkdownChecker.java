@@ -434,23 +434,40 @@ public class MarkdownChecker {
 
 	/**
 	 * A link to something that is not there (any more). If the document it
-	 * addresses is known to have moved then rewrite the link in the source
-	 * (see {@link SourceLinkFixer}) - but still report it as an error, so that
-	 * the build stops and the change gets reviewed and committed before the
-	 * site is published.
+	 * addresses can be found back - because a move was recorded for it, or
+	 * because exactly one document of that name exists elsewhere in the site -
+	 * then rewrite the link in the source (see {@link SourceLinkFixer}) - but
+	 * still report it as an error, so that the build stops and the change gets
+	 * reviewed and committed before the site is published.
 	 */
 	private void checkMovedReference(Node node, String url, String path, String kind) {
 		String sourceUrl = sourceUrl(node, url);
 		String target = m_moveMap.getTarget(path);
-		if(null == target) {
-			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error, kind + " link to unknown document: " + sourceUrl));
+		if(null != target) {
+			String newUrl = moveURL(url, target);
+			m_linkFixList.add(new LinkFix(m_currentItem, lineNumber(node), sourceUrl, newUrl));
+			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error,
+				kind + " link to moved document: " + sourceUrl + " is now at " + newUrl + " (fixed in the source; review and commit it)"));
 			return;
 		}
 
-		String newUrl = moveURL(url, target);
-		m_linkFixList.add(new LinkFix(m_currentItem, lineNumber(node), sourceUrl, newUrl));
-		m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error,
-			kind + " link to moved document: " + sourceUrl + " is now at " + newUrl + " (fixed in the source; review and commit it)"));
+		//-- Nothing recorded a move for it. Is there exactly one thing of that name in the site? Then that is where it went.
+		String name = Content.nameOf(path);
+		List<String> candidateList = m_content.findPathsByName(name);
+		if(candidateList.size() == 1) {
+			String newUrl = moveURL(url, candidateList.get(0));
+			m_linkFixList.add(new LinkFix(m_currentItem, lineNumber(node), sourceUrl, newUrl));
+			m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error,
+				kind + " link to moved document: " + sourceUrl + " - the only '" + name + "' in the site is at " + newUrl + " (fixed in the source; check it and commit it)"));
+			return;
+		}
+
+		//-- Several of them: which one was meant is anyone's guess, so only say where they are.
+		String message = kind + " link to unknown document: " + sourceUrl;
+		if(!candidateList.isEmpty()) {
+			message += " - there is a '" + name + "' at " + String.join(", ", candidateList) + ", but that is ambiguous so nothing was changed";
+		}
+		m_errorList.add(new Message(m_currentItem, lineNumber(node), MsgType.Error, message));
 	}
 
 	/**

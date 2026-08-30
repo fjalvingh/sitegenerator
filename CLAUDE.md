@@ -59,7 +59,12 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   `<siteRoot>/redirects.tsv` and collapses move chains, `RedirectWriter` emits a meta-refresh page at each old URL,
   and `SourceLinkFixer` repairs links to moved documents in the `.md` sources
   (which is reported as an error so the build stops and the change gets
-  committed). See the "Moved documents" section of `README.md`.
+  committed). `MoveMap` holds two maps: the recorded moves that become
+  redirects, which the `#moves` directive governs, and every rename git
+  detected, which repairs source links whatever that directive says. A move
+  nothing recorded at all is still found when the site holds exactly one
+  document of that name (`Content.findPathsByName`), and reported as a guess.
+  See the "Moved documents" section of `README.md`.
 - `MdImgRenderer.java` — custom image node renderer (resolves/copies image
   resources relative to the current page).
 - Custom commonmark extensions, one per subpackage, each following the same

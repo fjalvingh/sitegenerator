@@ -5,6 +5,7 @@ import org.eclipse.jdt.annotation.Nullable;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,6 +17,10 @@ import java.util.Set;
 public class Content {
 	/** The map of relative path to item */
 	private Map<String, ContentItem> m_itemMap = new HashMap<String, ContentItem>();
+
+	/** The paths in {@link #m_itemMap} indexed by their {@link #nameOf(String) name}, built when first asked for. */
+	@Nullable
+	private Map<String, List<String>> m_nameMap;
 
 	private int m_markDownItemCount;
 
@@ -240,6 +245,48 @@ public class Content {
 	@Nullable
 	public ContentItem findItem(String fullPath) {
 		return m_itemMap.get(fullPath);
+	}
+
+	/**
+	 * The content relative paths of everything known by the given name - the way
+	 * a document is found back after it moved with nothing recording where to.
+	 * Empty when the name is unused, and holding more than one path when the name
+	 * is not unique, in which case nothing can be concluded from it.
+	 */
+	@NonNull
+	public List<String> findPathsByName(@NonNull String name) {
+		Map<String, List<String>> map = m_nameMap;
+		if(null == map) {
+			map = new HashMap<>();
+			for(String path : m_itemMap.keySet()) {
+				map.computeIfAbsent(nameOf(path), a -> new ArrayList<>()).add(path);
+			}
+			map.values().forEach(Collections::sort);					// The item map is unordered; reports should not be
+			m_nameMap = map;
+		}
+		List<String> list = map.get(name);
+		return null == list ? Collections.emptyList() : list;
+	}
+
+	/**
+	 * The name a content relative path is known by: for a document living in a
+	 * directory of its own ("data/qcriteria/index.md") that is the directory's
+	 * name, since that is what the page is called and what travels with it when
+	 * it is moved; for anything else it is the file name.
+	 */
+	@NonNull
+	static String nameOf(@NonNull String path) {
+		int slash = path.lastIndexOf('/');
+		String name = path.substring(slash + 1);
+		if(slash < 0 || !isIndexName(name))
+			return name;
+		int previous = path.lastIndexOf('/', slash - 1);
+		return path.substring(previous + 1, slash);
+	}
+
+	private static boolean isIndexName(@NonNull String name) {
+		int dot = name.lastIndexOf('.');
+		return dot > 0 && "index".equalsIgnoreCase(name.substring(0, dot)) && MoveMap.isDocument(name);
 	}
 
 	public String getRenderedContent() {

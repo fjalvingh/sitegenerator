@@ -322,12 +322,43 @@ If the content is not in a git repository nothing breaks; `redirects.tsv` is
 then the only source of moves, and a site that has never had one gets no file
 at all.
 
-### Which renames get collected
+### When nothing recorded the move
+
+Git only reports a rename once it is committed or staged, and only when it
+still recognises the file afterwards. A directory moved in a file manager and
+not yet added, or a page rewritten in the same step it was moved, is a delete
+plus an unrelated new file as far as git is concerned - and then nothing says
+where the document went.
+
+The link is repaired anyway when the site itself can answer the question. A
+document is known by its *name*: the name of its directory for an article
+living in one of its own (`qcriteria` for `data/qcriteria/index.md`), the file
+name for anything else. If exactly one document of that name exists anywhere in
+the site, that is where the link is pointed:
+
+```
+Error data/index.md(11)  Link link to moved document: qcriteria/index.md - the only 'qcriteria' in the site is at ../newsection/qcriteria/index.md (fixed in the source; check it and commit it)
+```
+
+That is a guess rather than a recorded fact, which is why the build stops on it
+like on any other repair: check it went to the right place before committing.
+When the name is not unique nothing is changed at all and the candidates are
+listed instead, to be picked from by hand:
+
+```
+Error data/index.md(11)  Link link to unknown document: qcriteria/index.md - there is a 'qcriteria' at components/qcriteria/index.md, newsection/qcriteria/index.md, but that is ambiguous so nothing was changed
+```
+
+A link to a name the site does not have at all is simply reported as broken,
+the way it always was.
+
+### Which renames get a redirect
 
 A site that is still being built has no urls worth keeping: pages get moved
 around while its structure is worked out, and turning every one of those moves
 into a permanent redirect only preserves urls nobody ever used. A `#moves` line
-in `redirects.tsv` says which of the renames git knows about are collected:
+in `redirects.tsv` says which of the renames git knows about are recorded, and
+so get a redirect page:
 
 ```
 #moves off              ignore all of them, while the site is being restructured
@@ -336,15 +367,21 @@ in `redirects.tsv` says which of the renames git knows about are collected:
 ```
 
 The line lives in `redirects.tsv` itself, so there is nothing else to keep in
-sync, and it survives the rewrites the generator does of that file. It only
-controls *collecting*: the moves already listed in the file keep producing
-their redirect pages and keep repairing stale source links whatever it says.
+sync, and it survives the rewrites the generator does of that file.
+
+It decides one thing only: which old **urls** are kept alive. The site's own
+links are repaired from every rename git detects whatever it says - a link
+pointing at a document's old location is wrong regardless of what was decided
+about the outside world, and leaving it to be found at build time is exactly
+the reason it is worth fixing while a site is being restructured. The moves
+already listed in the file also keep producing their redirect pages whatever
+it says.
 
 While it is off every build prints the commit to start from once the structure
 has settled down:
 
 ```
-Move tracking is off ('#moves off' in redirects.tsv): git renames are ignored. To start recording them from here on, make that line: #moves since 1029404
+Move tracking is off ('#moves off' in redirects.tsv): renames repair the links in the sources but get no redirect page. To start recording them from here on, make that line: #moves since 1029404
 ```
 
 Replacing the line with that `#moves since <commit>` arms the tracking: the

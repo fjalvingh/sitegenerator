@@ -11,6 +11,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.MapOptionHandler;
+import to.etc.sigeto.utils.Pair;
 import to.etc.sigeto.variables.Variables;
 
 import java.io.File;
@@ -93,10 +94,22 @@ public class Main {
 
 			//-- Find out which documents moved, so old urls and stale links can be handled
 			MoveMap moveMap = MoveMap.load(sourceRoot);
-			if(moveMap.getTracking() == MoveMap.Tracking.Off) {
-				reportMoveTrackingOff(contentRoot);
-			} else {
-				moveMap.mergeRenames(GitMoveScanner.scanRenames(contentRoot, moveMap.getSinceCommit()));
+
+			//-- Every rename repairs the links in the sources; '#moves' only decides which are kept as redirects
+			List<Pair<String, String>> renameList = GitMoveScanner.scanRenames(contentRoot, null);
+			moveMap.mergeDetectedRenames(renameList);
+			switch(moveMap.getTracking()) {
+				case Off:
+					reportMoveTrackingOff(contentRoot);
+					break;
+
+				case Since:									// A smaller set than the one scanned above
+					moveMap.mergeRenames(GitMoveScanner.scanRenames(contentRoot, moveMap.getSinceCommit()));
+					break;
+
+				default:
+					moveMap.mergeRenames(renameList);
+					break;
 			}
 			moveMap.resolve(content, errorList);
 			moveMap.saveIfChanged();
@@ -210,7 +223,7 @@ public class Main {
 	}
 
 	/**
-	 * Say that renames are being ignored, and how to start collecting them
+	 * Say that no redirects are being recorded, and how to start recording them
 	 * from this point on once the site has settled down. Printed every build
 	 * because forgetting that it is off is exactly how old urls get lost.
 	 */
@@ -219,7 +232,7 @@ public class Main {
 		String hint = head == null
 			? ""
 			: " To start recording them from here on, make that line: #moves since " + head;
-		System.out.println("Move tracking is off ('#moves off' in " + MoveMap.FILENAME + "): git renames are ignored." + hint);
+		System.out.println("Move tracking is off ('#moves off' in " + MoveMap.FILENAME + "): renames repair the links in the sources but get no redirect page." + hint);
 	}
 
 	/**

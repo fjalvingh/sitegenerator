@@ -42,11 +42,13 @@ public class MoveMap {
 		+ "# generate redirect pages at the old locations. Hand edits are kept;\n"
 		+ "# commit this file.\n"
 		+ "#\n"
-		+ "# An optional '#moves' line says which renames are picked up from git:\n"
-		+ "#   #moves off              ignore them all, while a site is being restructured\n"
+		+ "# An optional '#moves' line says which of the renames git detects are\n"
+		+ "# recorded here, and so get a redirect page keeping their old url alive:\n"
+		+ "#   #moves off              none of them, while a site is being restructured\n"
 		+ "#   #moves since <commit>   only the renames made after <commit>\n"
 		+ "#   #moves all              every rename in the history (the default)\n"
-		+ "# The moves already listed below keep working whatever it says.\n";
+		+ "# The moves already listed below keep working whatever it says, and stale\n"
+		+ "# links in the markdown sources are repaired from every rename regardless.\n";
 
 	/** The name of the line that decides which git renames are collected. */
 	private static final String DIRECTIVE = "#moves";
@@ -56,7 +58,10 @@ public class MoveMap {
 		/** Every rename git can see: the default when there is no '#moves' line. */
 		All,
 
-		/** None at all - the site is being reorganised and its old urls do not matter (yet). */
+		/**
+		 * No redirects at all - the site is being reorganised and its old urls do
+		 * not matter (yet). Stale links in the sources are still repaired.
+		 */
 		Off,
 
 		/** Only the renames made after {@link MoveMap#getSinceCommit()}. */
@@ -73,6 +78,19 @@ public class MoveMap {
 	/** The moves that actually point at existing content, filled by {@link #resolve}. */
 	@NonNull
 	private final Map<String, String> m_usableMap = new TreeMap<>();
+
+	/**
+	 * Every rename git detected, whether or not '#moves' wants it recorded here.
+	 * A link in the sources pointing at the old location is wrong no matter what
+	 * the site decided about keeping that old url alive, so these repair links
+	 * even when they generate no redirect.
+	 */
+	@NonNull
+	private final Map<String, String> m_detectedMap = new TreeMap<>();
+
+	/** The moves usable to repair links in the sources, filled by {@link #resolve}. */
+	@NonNull
+	private final Map<String, String> m_repairMap = new TreeMap<>();
 
 	/** The file's content as it was loaded, to detect whether it needs rewriting. */
 	@NonNull
@@ -129,10 +147,12 @@ public class MoveMap {
 
 	/**
 	 * Handle a comment line that is really the '#moves' directive: it decides
-	 * which of the renames git knows about are collected into this map. A site
-	 * that is being reorganised does not want any of them - its pages have not
-	 * been anywhere yet - and can switch collecting on once it has settled
-	 * down, from the commit it settled down at.
+	 * which of the renames git knows about are recorded in this map, and so get
+	 * a redirect keeping their old url alive. A site that is being reorganised
+	 * does not want any of them - its pages have not been anywhere yet - and can
+	 * switch collecting on once it has settled down, from the commit it settled
+	 * down at. It says nothing about repairing the site's own links, which is
+	 * done from every rename regardless.
 	 */
 	private void parseDirectiveIf(@NonNull String line, @NonNull File mapFile, int lineNumber) {
 		String rest = line.substring(1).trim();							// Drop the '#'
@@ -178,6 +198,19 @@ public class MoveMap {
 	 * location it ever had is repointed at its newest one.
 	 */
 	public void mergeRenames(@NonNull List<Pair<String, String>> renameList) {
+		mergeInto(m_moveMap, renameList, true);
+	}
+
+	/**
+	 * Take in renames without recording them as redirects: they only serve to
+	 * repair stale links in the markdown sources. Everything git detected is
+	 * passed through here, whatever the '#moves' directive says.
+	 */
+	public void mergeDetectedRenames(@NonNull List<Pair<String, String>> renameList) {
+		mergeInto(m_detectedMap, renameList, false);
+	}
+
+	private void mergeInto(@NonNull Map<String, String> map, @NonNull List<Pair<String, String>> renameList, boolean count) {
 		for(Pair<String, String> rename : renameList) {
 			String oldPath = rename.getFirst();
 			String newPath = rename.getSecond();
@@ -187,15 +220,15 @@ public class MoveMap {
 				continue;
 
 			//-- Everything that pointed at the old location now points at the new one
-			for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
+			for(Map.Entry<String, String> entry : map.entrySet()) {
 				if(entry.getValue().equals(oldPath)) {
 					entry.setValue(newPath);
 				}
 			}
 
 			//-- And the old location itself becomes a redirect too
-			String previous = m_moveMap.put(oldPath, newPath);
-			if(null == previous) {
+			String previous = map.put(oldPath, newPath);
+			if(null == previous && count) {
 				m_addedCount++;
 			}
 		}
@@ -208,21 +241,18 @@ public class MoveMap {
 	 * whose target no longer exists. Unusable entries stay in the file - the
 	 * record of the move is still worth keeping - they just produce no
 	 * redirect.
+	 *
+	 * The moves that repair links in the sources are worked out the same way, but
+	 * separately: they also include the renames the '#moves' directive did not
+	 * want recorded.
 	 */
 	public void resolve(@NonNull Content content, @NonNull List<Message> errorList) {
 		m_usableMap.clear();
+		m_repairMap.clear();
 
 		//-- Drop resource moves an older version of this file may still hold
 		m_moveMap.entrySet().removeIf(a -> !isDocument(a.getKey()) || !isDocument(a.getValue()));
-
-
-		//-- Point every old location straight at the newest one
-		for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
-			entry.setValue(collapseChain(entry.getKey(), entry.getValue()));
-		}
-
-		//-- A document that moved away and back again did not move at all
-		m_moveMap.entrySet().removeIf(a -> a.getKey().equals(a.getValue()));
+		collapse(m_moveMap);
 
 		for(Map.Entry<String, String> entry : m_moveMap.entrySet()) {
 			String oldPath = entry.getKey();
@@ -235,6 +265,31 @@ public class MoveMap {
 			}
 			m_usableMap.put(oldPath, newPath);
 		}
+
+		//-- Links are repaired from the recorded moves plus every other rename git saw
+		Map<String, String> repairMap = new TreeMap<>(m_detectedMap);
+		repairMap.putAll(m_moveMap);
+		repairMap.entrySet().removeIf(a -> !isDocument(a.getKey()) || !isDocument(a.getValue()));
+		collapse(repairMap);
+		for(Map.Entry<String, String> entry : repairMap.entrySet()) {
+			if(null != content.findItem(entry.getKey()))				// The old path is live content again
+				continue;
+			if(null == content.findItem(entry.getValue()))				// Moved on out of sight: nothing to point a link at
+				continue;
+			m_repairMap.put(entry.getKey(), entry.getValue());
+		}
+	}
+
+	/**
+	 * Point every old location in this map straight at the newest one, and drop
+	 * the entries left pointing at themselves: a document that moved away and
+	 * back again did not move at all.
+	 */
+	private void collapse(@NonNull Map<String, String> map) {
+		for(Map.Entry<String, String> entry : map.entrySet()) {
+			entry.setValue(collapseChain(map, entry.getKey(), entry.getValue()));
+		}
+		map.entrySet().removeIf(a -> a.getKey().equals(a.getValue()));
 	}
 
 	/**
@@ -251,12 +306,12 @@ public class MoveMap {
 	 * chain (a -&gt; b, b -&gt; c). Stops on a cycle.
 	 */
 	@NonNull
-	private String collapseChain(@NonNull String oldPath, @NonNull String newPath) {
+	private String collapseChain(@NonNull Map<String, String> map, @NonNull String oldPath, @NonNull String newPath) {
 		Set<String> seen = new HashSet<>();
 		seen.add(oldPath);
 		String path = newPath;
 		while(seen.add(path)) {
-			String next = m_moveMap.get(path);
+			String next = map.get(path);
 			if(null == next)
 				break;
 			path = next;
@@ -266,12 +321,13 @@ public class MoveMap {
 
 	/**
 	 * The current location of a document that used to be at the given content
-	 * relative path, or null if that path was never moved (or its target no
-	 * longer exists).
+	 * relative path, for repairing a link that still points at it, or null if
+	 * that path was never moved (or its target no longer exists). This knows
+	 * about every rename git detected, not just the ones recorded as redirects.
 	 */
 	@Nullable
 	public String getTarget(@NonNull String oldPath) {
-		return m_usableMap.get(oldPath);
+		return m_repairMap.get(oldPath);
 	}
 
 	/**
