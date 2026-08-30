@@ -7,10 +7,12 @@ import net.sourceforge.plantuml.SourceStringReader;
 import net.sourceforge.plantuml.core.Diagram;
 import net.sourceforge.plantuml.core.ImageData;
 import net.sourceforge.plantuml.error.PSystemError;
+import net.sourceforge.plantuml.warning.Warning;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,11 +60,41 @@ public class PlantumlRenderCache {
 
 			ByteArrayOutputStream bos = new ByteArrayOutputStream(65536);
 			ImageData data = diagram.exportDiagram(bos, 0, new FileFormatOption(block.getFormat().getFileFormat()));
+			String warning = warning(diagram);
+			if(null != warning)
+				return PlantumlImage.error("the diagram would show a warning: " + warning, PlantumlImage.NO_LINE);
 			byte[] bytes = bos.toByteArray();
 			return PlantumlImage.of(bytes, width(block, bytes, data), height(block, bytes, data));
 		} catch(Exception x) {
 			return PlantumlImage.error("the diagram cannot be generated: " + x, PlantumlImage.NO_LINE);
 		}
+	}
+
+	/**
+	 * What PlantUML complained about while making the diagram: it draws such a
+	 * complaint into the image itself, as a banner above the diagram. Report it
+	 * instead, so the build stops on it the way it does on a syntax error and
+	 * the diagram gets fixed rather than published with the banner on it.
+	 */
+	@Nullable
+	private static String warning(@NonNull Diagram diagram) {
+		StringBuilder sb = new StringBuilder();
+		Collection<Warning> warningList = diagram.getWarnings();
+		if(null != warningList) {
+			for(Warning warning : warningList) {
+				append(sb, warning.asSingleLine());
+			}
+		}
+		append(sb, diagram.getWarningOrError());
+		return sb.length() == 0 ? null : sb.toString();
+	}
+
+	private static void append(@NonNull StringBuilder sb, @Nullable String text) {
+		if(null == text || text.isBlank())
+			return;
+		if(sb.length() > 0)
+			sb.append("; ");
+		sb.append(text.trim());
 	}
 
 	/**

@@ -238,7 +238,10 @@ load. The wrapping div is what the stylesheet gets to work with — give it
 A diagram PlantUML cannot parse is an error naming the file and **the line
 inside the block** the complaint is about, and it stops the build: publishing a
 page with PlantUML's error drawing on it would be worse. An option that is not
-an option is reported the same way.
+an option is reported the same way. A diagram PlantUML *can* parse but complains
+about - a deprecated construct, say - stops the build too: PlantUML would draw
+its complaint into the image as a banner over the diagram, and a warning nobody
+sees until it is on the website is a warning that never gets fixed.
 
 Diagrams are generated once per build no matter how often the same source
 appears, but they are the slowest thing the generator does — a site with a
