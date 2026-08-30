@@ -485,14 +485,15 @@ public class MarkdownChecker {
 	/**
 	 * Rewrite a url that addressed the old location into one addressing the
 	 * new one, keeping the way the original was written: a url starting at the
-	 * site root stays site-root relative, anything else stays relative to the
-	 * page using it.
+	 * site root stays site-root relative, anything else becomes the shortest
+	 * path from the page using it - which is the form the links around it in
+	 * the source are written in.
 	 */
 	private String moveURL(String url, String target) {
 		if(url.startsWith("/"))
 			return "/" + target;
 		String base = m_currentItem.getDirectoryPath();
-		return Util.relativeHref(base, target);
+		return Util.relativePath(base, target);
 	}
 
 	/**

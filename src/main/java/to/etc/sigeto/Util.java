@@ -19,6 +19,7 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -179,6 +180,50 @@ public class Util {
 	 */
 	public static String relativeHref(String outputDir, String targetPath) {
 		return depthPrefix(outputDir) + targetPath;
+	}
+
+	/**
+	 * The shortest relative path from a directory to a file, both relative to
+	 * the same root: the directories the two have in common are dropped, and
+	 * only what is left of the starting directory is climbed out of with
+	 * "../". A sibling of the file's own directory becomes "../other/x.md",
+	 * not "../../here/other/x.md".
+	 *
+	 * This is what a link written into a markdown <i>source</i> needs: the
+	 * author wrote the short form and expects to get it back, and the long
+	 * form of {@link #relativeHref} - correct, but climbing to the site root
+	 * every time - makes a repaired link look nothing like the ones around it.
+	 */
+	@NonNull
+	public static String relativePath(@NonNull String fromDir, @NonNull String targetPath) {
+		String[] from = segments(fromDir);
+		String[] target = segments(targetPath);
+		int fileIndex = target.length - 1;							// The last segment is the file itself, never a directory to share
+		int common = 0;
+		while(common < from.length && common < fileIndex && from[common].equals(target[common])) {
+			common++;
+		}
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("../".repeat(from.length - common));
+		for(int i = common; i < target.length; i++) {
+			if(i > common) {
+				sb.append('/');
+			}
+			sb.append(target[i]);
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * The non-empty parts of a '/' separated path, so that a leading, trailing
+	 * or doubled slash does not become a segment of its own.
+	 */
+	@NonNull
+	private static String[] segments(@NonNull String path) {
+		return Arrays.stream(path.split("/"))
+			.filter(a -> !a.isEmpty())
+			.toArray(String[]::new);
 	}
 
 	public static Dimension getImageDimension(File imgFile) throws IOException {
