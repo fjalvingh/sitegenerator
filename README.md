@@ -416,17 +416,36 @@ skip them.
 
 After all content has been scanned and all page titles are known, the generator
 builds a menu tree from the content tree: one `MenuItem` per page, nested the
-way the content directories are nested, sorted by title. A page's front matter
-can adjust its entry:
+way the content directories are nested. A page's front matter can adjust its
+entry:
 
 ```
 ---
 menu:
   title: Short menu title      # instead of the page's own title
-  sort: 3 Short menu title     # sort under something else than the title
+  sort: 30                     # where the page sits among its siblings
   hidden: true                 # leave this page (and everything below it) out
 ---
 ```
+
+### The order of the items in a level
+
+Inside one level, **the pages that have a sort order come first**, in that
+order, and **the pages without one come after them**, sorted by title. Numeric
+sort orders are compared as numbers, so `100` sorts after `20`; a sort order
+that is not a number is compared as text and sorts after the numeric ones.
+
+A page gets its sort order in one of two ways:
+
+- the **name of its directory starting with a number and a dash**, like
+  `20-using-components`. The number is the sort order; it is not part of the
+  page's url, which keeps the whole name, and not part of its title.
+- the front matter's `menu.sort`, which **wins** over a number in the name.
+
+So a level whose pages are ordered entirely by their directory names needs no
+front matter at all, and a single page can still be moved somewhere else in
+that order by giving it a `menu.sort`. Pages that have neither simply follow
+in alphabetical order.
 
 The menu shown on a page is always the same one, regardless of how it is
 rendered: **all top level items**, plus **the children of every item on the

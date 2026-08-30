@@ -3,7 +3,6 @@ package to.etc.sigeto;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,7 +45,7 @@ public class Menu {
 
 	static public Menu create(Content content) {
 		ContentLevel rootLevel = content.getPageRootLevel();
-		MenuItem rootItem = new MenuItem(null, rootLevel, rootLevel.getRootItem(), "root", "root", 0);
+		MenuItem rootItem = new MenuItem(null, rootLevel, rootLevel.getRootItem(), "root", null, 0);
 		ContentLevel index = rootLevel.getSubLevelList().stream()
 			.filter(a -> a.getName().startsWith("index"))
 			.findFirst().orElse(null);
@@ -76,7 +75,7 @@ public class Menu {
 		}
 
 		//-- Now sort the items
-		rootItem.getSubItemList().sort(Comparator.comparing(a -> a.getSortTitle()));
+		rootItem.getSubItemList().sort(MenuItem.BY_MENU_ORDER);
 		List<MenuItem> subItemList = rootItem.getSubItemList();
 		for(int i = 0; i < subItemList.size(); i++) {
 			MenuItem item = subItemList.get(i);
@@ -86,8 +85,9 @@ public class Menu {
 
 	@Nullable
 	private MenuItem createItemIf(MenuItem rootItem, ContentItem item, @Nullable ContentLevel level) {
-		String title = defaultTitle(item, level);
-		String sortTitle = title;
+		String name = level == null ? Util.getFilenameSansExtension(item.getName()) : level.getName();
+		String title = defaultTitle(item, name);
+		String sortKey = sortPrefix(name);				// A numeric name prefix is the default sort order
 
 		Object o = item.getFrontMatter().get("menu");
 		Map<String, Object> options;
@@ -104,18 +104,17 @@ public class Menu {
 		o = options.get("title");
 		if(o != null) {
 			title = o.toString();
-			sortTitle = title;
 		}
 
 		o = options.get("sort");
 		if(o != null) {
-			sortTitle = o.toString();
+			sortKey = o.toString();						// Front matter wins over the name prefix
 		}
 		o = options.get("hidden");
 		if(o != null)
 			return null;
 
-		MenuItem mi = new MenuItem(rootItem, level == null ? item.getLevel() : level, item, title, sortTitle, rootItem.getItemLevel() + 1);
+		MenuItem mi = new MenuItem(rootItem, level == null ? item.getLevel() : level, item, title, sortKey, rootItem.getItemLevel() + 1);
 		rootItem.getSubItemList().add(mi);
 		m_itemMap.put(item, mi);
 
@@ -129,14 +128,49 @@ public class Menu {
 	/**
 	 * The title to show for a page: the page's own title, or - for a page
 	 * without a title heading - the name of the thing it was made from, so
-	 * that a missing heading does not break the entire menu.
+	 * that a missing heading does not break the entire menu. A numeric sort
+	 * prefix on that name is not part of the title.
 	 */
 	@NonNull
-	private static String defaultTitle(ContentItem item, @Nullable ContentLevel level) {
+	private static String defaultTitle(ContentItem item, String name) {
 		String title = item.getPageTitle();
 		if(null != title && !title.isBlank()) {
 			return title;
 		}
-		return level == null ? Util.getFilenameSansExtension(item.getName()) : level.getName();
+		return stripSortPrefix(name);
+	}
+
+	/**
+	 * The sort order encoded in a directory or file name that starts with a
+	 * number followed by a dash, like "20-using-components"; null for any other
+	 * name.
+	 */
+	@Nullable
+	static String sortPrefix(String name) {
+		int ix = prefixEnd(name);
+		return ix < 0 ? null : name.substring(0, ix);
+	}
+
+	/**
+	 * The name without its numeric sort prefix, if it has one.
+	 */
+	@NonNull
+	static String stripSortPrefix(String name) {
+		int ix = prefixEnd(name);
+		return ix < 0 ? name : name.substring(ix + 1);
+	}
+
+	/**
+	 * The index of the dash ending the numeric prefix of the name, or -1 if the
+	 * name does not start with "number-".
+	 */
+	private static int prefixEnd(String name) {
+		int len = name.length();
+		int ix = 0;
+		while(ix < len && Character.isDigit(name.charAt(ix)))
+			ix++;
+		if(ix == 0 || ix >= len - 1 || name.charAt(ix) != '-')
+			return -1;
+		return ix;
 	}
 }
