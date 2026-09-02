@@ -295,6 +295,31 @@ rather than deleted the link is repaired in the source, see
 as blog entries (see above) get additional blog-specific rendering (entry
 listing, dates) via the blog extension.
 
+A link may address a **place inside** a page rather than the page as a whole,
+with the usual `#fragment`:
+
+```
+[the binding rules](../datatable/index.md#data-binding-in-a-table)
+[the database](#the-database)
+```
+
+Those are checked too. The fragment must match something the target page
+actually renders: the anchor of one of its headings — the heading text,
+lowercased, as `[TOC]` and the heading anchors themselves produce it — or an
+`id="…"` written in raw html in the markdown. A fragment that matches nothing
+fails the build the way a dangling link does, and the message names the
+anchor that comes closest:
+
+```
+Error components/…/rowrenderer/index.md(120)  Link link to unknown place in a
+document: ../datatable/index.md#data-binding-in-a-tabel - did you mean
+#data-binding-in-a-table?
+```
+
+Because a link can point forward at a page that has not been read yet, the
+fragments are collected during the scan and checked once every page has been
+scanned.
+
 ## Moved documents
 
 Renaming or moving an article changes its URL, which breaks every link to it

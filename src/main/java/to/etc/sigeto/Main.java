@@ -131,6 +131,9 @@ public class Main {
 			}
 			System.out.println("Found " + mdFiles + " pages and " + blogFiles + " blog items");
 
+			//-- Links into a place inside a page can only be checked once every page has been scanned
+			mc.checkAnchors(errorList);
+
 			//-- Repair the links to moved documents in the sources themselves
 			List<LinkFix> linkFixList = mc.getLinkFixList();
 			if(!linkFixList.isEmpty()) {

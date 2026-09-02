@@ -230,6 +230,27 @@ public class Content {
 		return true;
 	}
 
+	/**
+	 * The part of a link url that addresses a document: everything before the
+	 * "#fragment", which addresses a place <i>inside</i> that document.
+	 */
+	static public String documentPart(String url) {
+		int hash = url.indexOf('#');
+		return hash < 0 ? url : url.substring(0, hash);
+	}
+
+	/**
+	 * The "#fragment" of a link url without its '#', or null when it has none.
+	 * An empty fragment ("page.md#") counts as none.
+	 */
+	@Nullable
+	static public String fragmentPart(String url) {
+		int hash = url.indexOf('#');
+		if(hash < 0 || hash == url.length() - 1)
+			return null;
+		return url.substring(hash + 1);
+	}
+
 	public ContentTag getTag(String tagName) {
 		return m_tagMap.computeIfAbsent(tagName.toLowerCase(), a -> new ContentTag(a));
 	}

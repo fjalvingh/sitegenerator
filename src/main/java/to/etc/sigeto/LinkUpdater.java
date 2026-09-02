@@ -31,6 +31,10 @@ final public class LinkUpdater extends AbstractVisitor {
 		if(null == target) {
 			return url;
 		}
-		return Util.relativeHref(m_outputDir, target.getRelativeTargetPath());
+		String href = Util.relativeHref(m_outputDir, target.getRelativeTargetPath());
+
+		//-- A "#fragment" addresses a place inside the target page: it survives the rewrite.
+		String fragment = Content.fragmentPart(url);
+		return null == fragment ? href : href + "#" + fragment;
 	}
 }

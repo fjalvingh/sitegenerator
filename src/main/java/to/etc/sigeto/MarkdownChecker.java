@@ -3,10 +3,16 @@ package to.etc.sigeto;
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
+import org.commonmark.ext.heading.anchor.IdGenerator;
+import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.Code;
 import org.commonmark.node.Heading;
+import org.commonmark.node.HtmlBlock;
+import org.commonmark.node.HtmlInline;
 import org.commonmark.node.Image;
 import org.commonmark.node.Link;
 import org.commonmark.node.Node;
+import org.commonmark.node.Text;
 import org.commonmark.node.SourceSpan;
 import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
@@ -41,6 +47,8 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -187,6 +195,7 @@ public class MarkdownChecker {
 	public void scanContent(List<Message> errorList, ContentItem item) throws Exception {
 		m_errorList = errorList;
 		m_currentItem = item;
+		m_idGenerator = new IdGenerator.Builder().build();		// Anchors are numbered per document
 		//System.out.println("Pre-parsing " + item.getRelativePath());
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
@@ -299,6 +308,9 @@ public class MarkdownChecker {
 	}
 
 
+	/** Hands out the heading anchors of the document being scanned, exactly as the renderer will. */
+	private IdGenerator m_idGenerator = new IdGenerator.Builder().build();
+
 	private void checkNode(Node node) {
 		if(node instanceof Link) {
 			checkLink((Link) node);
@@ -316,6 +328,44 @@ public class MarkdownChecker {
 				String hdr = m_textRenderer.render(heading);
 				m_currentItem.setPageTitle(hdr);
 			}
+			m_currentItem.addAnchor(headingAnchor(heading));
+		} else if(node instanceof HtmlBlock) {
+			collectHtmlAnchors(((HtmlBlock) node).getLiteral());
+		} else if(node instanceof HtmlInline) {
+			collectHtmlAnchors(((HtmlInline) node).getLiteral());
+		}
+	}
+
+	/**
+	 * The anchor a heading will get, calculated the way HeadingAnchorExtension
+	 * calculates it when the page is rendered: the text and code inside the
+	 * heading, trimmed and lowercased, through the same {@link IdGenerator}.
+	 * The generator is per document and remembers what it handed out, so two
+	 * headings with the same text get the same distinct ids here as there.
+	 */
+	private String headingAnchor(Heading heading) {
+		StringBuilder sb = new StringBuilder();
+		heading.accept(new AbstractVisitor() {
+			@Override
+			public void visit(Text text) {
+				sb.append(text.getLiteral());
+			}
+
+			@Override
+			public void visit(Code code) {
+				sb.append(code.getLiteral());
+			}
+		});
+		return m_idGenerator.generateId(sb.toString().trim().toLowerCase());
+	}
+
+	/** id="..." or id='...' written in raw html in the markdown - the older pages anchor sections that way. */
+	static private final Pattern HTML_ID_PATTERN = Pattern.compile("\\bid\\s*=\\s*[\"']([^\"']+)[\"']");
+
+	private void collectHtmlAnchors(String html) {
+		Matcher m = HTML_ID_PATTERN.matcher(html);
+		while(m.find()) {
+			m_currentItem.addAnchor(m.group(1));
 		}
 	}
 
@@ -421,8 +471,16 @@ public class MarkdownChecker {
 	}
 
 	private void checkReference(Node node, String url, String kind) {
+		if(url.startsWith("#")) {
+			//-- A link into this page itself: the anchor is all there is to check.
+			String fragment = Content.fragmentPart(url);
+			if(null != fragment)
+				m_anchorCheckList.add(new AnchorCheck(m_currentItem, lineNumber(node), m_currentItem, fragment, sourceUrl(node, url), kind));
+			return;
+		}
+
 		String path = m_currentItem.resolveURL(url);
-		if(null == path)												// External link or in-page anchor: not ours to check
+		if(null == path)												// External link: not ours to check
 			return;
 
 		ContentItem item = m_content.findItem(path);
@@ -431,6 +489,96 @@ public class MarkdownChecker {
 			return;
 		}
 		m_currentItem.addUsedItem(item, url);
+
+		//-- A "#fragment" addresses a place inside that document; it can only be checked once every
+		//-- document has been scanned, so remember it for the second pass.
+		String fragment = Content.fragmentPart(url);
+		if(null != fragment && item.getFileType() == ContentFileType.Markdown)
+			m_anchorCheckList.add(new AnchorCheck(m_currentItem, lineNumber(node), item, fragment, sourceUrl(node, url), kind));
+	}
+
+	/*----------------------------------------------------------------------*/
+	/*	CODING:	Anchors: checked after everything has been scanned	*/
+	/*----------------------------------------------------------------------*/
+
+	/** One "#fragment" used in a link, to be checked once the page it points at has been scanned. */
+	private static final class AnchorCheck {
+		private final ContentItem m_source;
+
+		private final int m_line;
+
+		private final ContentItem m_target;
+
+		private final String m_anchor;
+
+		private final String m_url;
+
+		private final String m_kind;
+
+		AnchorCheck(ContentItem source, int line, ContentItem target, String anchor, String url, String kind) {
+			m_source = source;
+			m_line = line;
+			m_target = target;
+			m_anchor = anchor;
+			m_url = url;
+			m_kind = kind;
+		}
+	}
+
+	private final List<AnchorCheck> m_anchorCheckList = new ArrayList<>();
+
+	/**
+	 * Report every "#fragment" that addresses a place which is not there. This
+	 * can only be done when all documents have been scanned, because a link may
+	 * point forward at a page that has not been read yet.
+	 */
+	public void checkAnchors(List<Message> errorList) {
+		for(AnchorCheck check : m_anchorCheckList) {
+			if(check.m_target.hasAnchor(check.m_anchor))
+				continue;
+			String message = check.m_kind + " link to unknown place in a document: " + check.m_url;
+			String near = nearestAnchor(check.m_target, check.m_anchor);
+			if(null != near)
+				message += " - did you mean #" + near + "?";
+			errorList.add(new Message(check.m_source, check.m_line, MsgType.Error, message));
+		}
+		m_anchorCheckList.clear();
+	}
+
+	/**
+	 * An anchor of the target page that looks like the one that was asked for,
+	 * to make the error useful when a heading was reworded slightly or the name
+	 * was mistyped. The best match wins: one that contains the other, or else
+	 * the one sharing the longest prefix - provided that is most of the name.
+	 */
+	@Nullable
+	private String nearestAnchor(ContentItem item, String anchor) {
+		String best = null;
+		int bestScore = 0;
+		for(String candidate : item.getAnchorSet()) {
+			int score;
+			if(candidate.contains(anchor) || anchor.contains(candidate)) {
+				score = Math.min(candidate.length(), anchor.length());
+			} else {
+				score = commonPrefixLength(candidate, anchor);
+				if(score * 2 < Math.max(candidate.length(), anchor.length()))
+					continue;								// Too little in common to be a suggestion
+			}
+			if(score > bestScore) {
+				bestScore = score;
+				best = candidate;
+			}
+		}
+		return best;
+	}
+
+	static private int commonPrefixLength(String a, String b) {
+		int max = Math.min(a.length(), b.length());
+		int i = 0;
+		while(i < max && a.charAt(i) == b.charAt(i)) {
+			i++;
+		}
+		return i;
 	}
 
 	/**

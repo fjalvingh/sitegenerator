@@ -36,7 +36,12 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
 - `MarkdownChecker.java` — wraps the commonmark `Parser`/`HtmlRenderer`,
   splits YAML front matter from Markdown, validates internal links/images
   against the `Content` model (build fails on dangling links), and extracts
-  the page title from the first `#` heading.
+  the page title from the first `#` heading. It also collects the anchors each
+  page will render — its heading ids, computed exactly the way
+  `HeadingAnchorExtension` computes them at render time, plus any `id="…"` in
+  raw html — and checks every `#fragment` used in a link against them. That
+  check is deferred to `checkAnchors()`, called from `Main` after all pages are
+  scanned, because a link may point forward at a page not read yet.
 - `Menu.java` / `MenuItem.java` — builds the site navigation tree from
   `Content` after the scan/check phase (`Content.complete()`), one `MenuItem`
   per page. Which part of that tree a page shows is decided by `PageModel`

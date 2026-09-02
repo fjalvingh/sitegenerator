@@ -118,10 +118,17 @@ public class ContentItem {
 	 * relative path it addresses, in the form the content map is keyed by.
 	 * Returns null for urls that do not address content at all (external
 	 * links, in-page anchors).
+	 *
+	 * <p>A "#fragment" addresses a place inside the document rather than
+	 * another document, so it takes no part in resolving: it is removed here
+	 * and checked separately (see {@link MarkdownChecker}).</p>
 	 */
 	@Nullable
 	public String resolveURL(String url) {
 		if(!Content.isRelativePath(url))
+			return null;
+		url = Content.documentPart(url);
+		if(url.isEmpty())									// "#fragment" only: this page itself
 			return null;
 
 		if(url.startsWith("/")) {
@@ -132,6 +139,30 @@ public class ContentItem {
 		Path path = Path.of(getDirectoryPath());
 		Path resolvedPath = path.resolve(url).normalize();
 		return resolvedPath.toString();
+	}
+
+	/*----------------------------------------------------------------------*/
+	/*	CODING:	The anchors this page will have						*/
+	/*----------------------------------------------------------------------*/
+
+	/**
+	 * Every id this page renders: the anchors of its headings, plus the ids
+	 * written in raw html in the markdown itself. A link ending in "#name" is
+	 * checked against this, so a link into a section that is not there fails
+	 * the build just like a link to a document that is not there.
+	 */
+	private final Set<String> m_anchorSet = new HashSet<>();
+
+	public void addAnchor(String anchor) {
+		m_anchorSet.add(anchor);
+	}
+
+	public boolean hasAnchor(String anchor) {
+		return m_anchorSet.contains(anchor);
+	}
+
+	public Set<String> getAnchorSet() {
+		return m_anchorSet;
 	}
 
 
