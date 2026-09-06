@@ -79,6 +79,10 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   - `emojis/` — `:shortcode:` emoji, data-driven from
     `src/main/resources/emoji/emoji.csv`.
   - `tables/` — GFM table rendering.
+  - `figures/` — an image alone in its paragraph becomes a captioned
+    `<figure>`. Like `plantuml/` this hooks in through a `PostProcessor`:
+    whether an image stands alone is a property of the paragraph around it,
+    which only exists once that paragraph has been parsed.
   - `blogextension/` — blog-entry-specific parsing/rendering.
   - `demos/` — `!demo(path)` iframe showing a page of the live application.
   - `variables/` — `${name}` variables. `VariableFile` loads the site's own

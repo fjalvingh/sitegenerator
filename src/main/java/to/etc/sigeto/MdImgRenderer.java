@@ -1,14 +1,12 @@
 package to.etc.sigeto;
 
-import org.commonmark.node.AbstractVisitor;
-import org.commonmark.node.Code;
 import org.commonmark.node.Image;
 import org.commonmark.node.Node;
-import org.commonmark.node.Text;
 import org.commonmark.renderer.NodeRenderer;
 import org.commonmark.renderer.html.HtmlNodeRendererContext;
 import org.commonmark.renderer.html.HtmlWriter;
 import org.eclipse.jdt.annotation.NonNull;
+import to.etc.sigeto.figures.FigureBlock;
 import to.etc.sigeto.unidiot.WrappedException;
 
 import java.awt.*;
@@ -43,7 +41,7 @@ final public class MdImgRenderer implements NodeRenderer {
 	private void fixImage(@NonNull Image node) {
 		try {
 			String url = node.getDestination();
-			String alt = altText(node);
+			String alt = FigureBlock.altText(node);
 			if(Content.isRelativePath(url)) {
 				ContentItem item = m_item.findItemByURL(url);
 				if(null != item) {
@@ -82,24 +80,6 @@ final public class MdImgRenderer implements NodeRenderer {
 		} catch(Exception e) {
 			throw WrappedException.wrap(e);
 		}
-	}
-
-	/**
-	 * Concatenates the Text/Code children of the Image node, which is how commonmark
-	 * represents an image's alt text (the "..." in ![...](url)).
-	 */
-	private String altText(Image node) {
-		StringBuilder sb = new StringBuilder();
-		node.accept(new AbstractVisitor() {
-			@Override public void visit(Text text) {
-				sb.append(text.getLiteral());
-			}
-
-			@Override public void visit(Code code) {
-				sb.append(code.getLiteral());
-			}
-		});
-		return sb.toString();
 	}
 
 	private Map<String, String> imgAttributes(String url, String alt, String... extra) {

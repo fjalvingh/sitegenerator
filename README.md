@@ -285,6 +285,36 @@ Standard GitHub-flavored-Markdown tables (`MyTablesExtension`) and
 `~~strikethrough~~` are supported, along with automatically generated heading
 anchors.
 
+### Figures and captions
+
+An image that stands alone in its paragraph is rendered as a `<figure>` rather
+than as a bare `<img>` inside a `<p>`, so a stylesheet can frame it as one
+object:
+
+```
+![pdp 11/10](1110-1.png)
+```
+
+```html
+<figure class="ui-figure"><img src="1110-1.png" alt="pdp 11/10" …></figure>
+```
+
+An image sharing its paragraph with text, or with a second image, is left
+alone — only a lone one becomes a figure.
+
+To caption it, give the image a **markdown title**: the quoted text after the
+url. It is rendered as the `<figcaption>` below the image.
+
+```
+![pdp 11/10](1110-1.png "An early model in the 5 1/4\" box.")
+```
+
+The caption is deliberately not the alt text, because the two are written for
+different readers: alt text names the image for someone who cannot see it and
+is usually a short label ("board layout"), while a caption is read next to the
+photo by someone who can. An image with no title still becomes a figure and
+gets the same framing, it just shows no caption.
+
 ### Links, images and blogs
 
 Internal links and images (`[text](other-page.md)`, `![alt](photo.png)`) are

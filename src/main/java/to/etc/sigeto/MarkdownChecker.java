@@ -25,6 +25,7 @@ import to.etc.sigeto.blogextension.BlogExtension;
 import to.etc.sigeto.demos.DemoBlock;
 import to.etc.sigeto.demos.DemoExtension;
 import to.etc.sigeto.emojis.EmojiExtension;
+import to.etc.sigeto.figures.FigureExtension;
 import to.etc.sigeto.notifications.NotificationsExtension;
 import to.etc.sigeto.plantuml.PlantumlBlock;
 import to.etc.sigeto.plantuml.PlantumlExtension;
@@ -136,6 +137,7 @@ public class MarkdownChecker {
 			TocExtension.create(),
 			HeadingAnchorExtension.create(),
 			NotificationsExtension.create(),
+			FigureExtension.create(),
 			EmojiExtension.create(),
 			DemoExtension.create(includeBase),
 			PlantumlExtension.create(m_plantumlCache),
