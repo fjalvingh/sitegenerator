@@ -288,32 +288,43 @@ anchors.
 ### Figures and captions
 
 An image that stands alone in its paragraph is rendered as a `<figure>` rather
-than as a bare `<img>` inside a `<p>`, so a stylesheet can frame it as one
-object:
+than as a bare `<img>` inside a `<p>`, and its alt text becomes the visible
+`<figcaption>` below it:
 
 ```
-![pdp 11/10](1110-1.png)
+![An early model in the 5 1/4" box, with the 11/10 badge on the right.](1110-1.png)
 ```
 
 ```html
-<figure class="ui-figure"><img src="1110-1.png" alt="pdp 11/10" …></figure>
+<figure class="ui-figure">
+  <img src="1110-1.png" alt="An early model in the 5 1/4&quot; box, …">
+  <figcaption>An early model in the 5 1/4" box, …</figcaption>
+</figure>
 ```
 
-An image sharing its paragraph with text, or with a second image, is left
-alone — only a lone one becomes a figure.
+An image sharing its paragraph with text is left alone.
 
-To caption it, give the image a **markdown title**: the quoted text after the
-url. It is rendered as the `<figcaption>` below the image.
+Images written on **consecutive lines** are one paragraph, and become one
+figure holding both, with their alt texts joined into a single caption:
 
 ```
-![pdp 11/10](1110-1.png "An early model in the 5 1/4\" box.")
+![The error table, codes 17 to 29.](errors1.png)
+![The rest of it: codes 30 and 31.](errors2.png)
 ```
 
-The caption is deliberately not the alt text, because the two are written for
-different readers: alt text names the image for someone who cannot see it and
-is usually a short label ("board layout"), while a caption is read next to the
-photo by someone who can. An image with no title still becomes a figure and
-gets the same framing, it just shows no caption.
+That is what writing them that way means — two scans of the facing pages of a
+manual are one illustration, not two — so they share one frame and one caption.
+Separate them with a blank line to get two independent figures instead.
+
+The alt text does double duty deliberately. Keeping the caption in a separate
+markdown title was tried first and abandoned: it is more to type for every
+image, and the result is that captions do not get written. Writing the
+sentence once, in the place the syntax already has for it, is what makes
+captioning cheap enough to keep up with. An image with no alt text still
+becomes a figure and gets the same framing, it just shows no caption.
+
+Because the text is now read rather than only announced, it is worth writing
+it as a sentence — "An early model in the 5 1/4\" box" rather than "pdp 11/10".
 
 ### Links, images and blogs
 

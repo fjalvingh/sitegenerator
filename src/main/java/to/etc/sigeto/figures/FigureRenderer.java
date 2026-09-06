@@ -29,7 +29,9 @@ public class FigureRenderer implements NodeRenderer {
 		FigureBlock fb = (FigureBlock) node;
 		m_htmlWriter.line();
 		m_htmlWriter.tag("figure", Util.attributes("class", "ui-figure"));
-		renderChildren(fb);											// The image, which MdImgRenderer sizes and links
+		m_htmlWriter.tag("div", Util.attributes("class", "ui-figure-imgs"));
+		renderChildren(fb);											// The images, which MdImgRenderer sizes and links
+		m_htmlWriter.tag("/div");
 		String caption = fb.getCaption();
 		if(!caption.isBlank()) {
 			m_htmlWriter.tag("figcaption");

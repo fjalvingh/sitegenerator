@@ -5,6 +5,7 @@ import org.commonmark.node.Image;
 import org.commonmark.node.Link;
 import org.commonmark.node.Node;
 import org.commonmark.node.Paragraph;
+import org.commonmark.node.SoftLineBreak;
 import org.commonmark.parser.PostProcessor;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
@@ -13,11 +14,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Turns every paragraph that holds nothing but one image into a {@link
+ * Turns every paragraph that holds nothing but images into a {@link
  * FigureBlock}. This happens after the parse because whether an image stands
- * on its own is a property of the paragraph around it, which is only known
- * once that paragraph has been parsed; a paragraph with an image and text in
- * it, or with two images side by side, is left alone.
+ * on its own is a property of the paragraph around it, which only exists once
+ * that paragraph has been parsed; a paragraph mixing an image with text is
+ * left alone.
+ *
+ * Several images written on consecutive lines are one paragraph, and become
+ * one figure with one caption - which is what an author writing them that way
+ * means: two scans of the facing pages of a manual are a single illustration,
+ * not two.
  */
 public class FigurePostProcessor implements PostProcessor {
 	@Override
@@ -26,7 +32,7 @@ public class FigurePostProcessor implements PostProcessor {
 		node.accept(new AbstractVisitor() {
 			@Override
 			public void visit(Paragraph paragraph) {
-				if(null != loneImageOf(paragraph)) {
+				if(null != imagesOf(paragraph)) {
 					paragraphList.add(paragraph);
 				}
 				super.visit(paragraph);
@@ -35,16 +41,19 @@ public class FigurePostProcessor implements PostProcessor {
 
 		//-- Replacing them while walking the document would change what is being walked
 		for(Paragraph paragraph : paragraphList) {
-			Image image = loneImageOf(paragraph);
-			if(null == image) {
-				continue;											// Cannot happen: loneImageOf said otherwise above
+			List<Image> imageList = imagesOf(paragraph);
+			if(null == imageList) {
+				continue;											// Cannot happen: imagesOf said otherwise above
 			}
-			String title = image.getTitle();
-			FigureBlock block = FigureBlock.create(null == title ? "" : title);
+			FigureBlock block = FigureBlock.create(FigureBlock.caption(imageList));
 			block.setSourceSpans(paragraph.getSourceSpans());		// So an error can name the line the image is on
-			Node child = paragraph.getFirstChild();					// The image, or the link around it
-			child.unlink();
-			block.appendChild(child);
+			for(Node child : childrenOf(paragraph)) {
+				if(child instanceof SoftLineBreak) {
+					continue;										// The newline between two images; the figure lays them out
+				}
+				child.unlink();
+				block.appendChild(child);							// The image, or the link around it
+			}
 			paragraph.insertBefore(block);
 			paragraph.unlink();
 		}
@@ -52,25 +61,49 @@ public class FigurePostProcessor implements PostProcessor {
 	}
 
 	/**
-	 * The image a paragraph holds when it holds nothing else: the image itself,
-	 * or the image inside a link when the author wrote the "[![alt](img)](target)"
-	 * form. Null for every other paragraph, which stays a paragraph.
+	 * The images a paragraph holds when it holds nothing else: the images
+	 * themselves, or the images inside links when the author wrote the
+	 * "[![alt](img)](target)" form, with only the line breaks between them.
+	 * Null for every other paragraph, which stays a paragraph.
 	 */
 	@Nullable
-	private static Image loneImageOf(@NonNull Paragraph paragraph) {
-		Node child = paragraph.getFirstChild();
-		if(null == child || null != child.getNext()) {
-			return null;
+	private static List<Image> imagesOf(@NonNull Paragraph paragraph) {
+		List<Image> imageList = new ArrayList<>();
+		for(Node child : childrenOf(paragraph)) {
+			if(child instanceof SoftLineBreak) {
+				continue;
+			}
+			Image image = imageOf(child);
+			if(null == image) {
+				return null;									// Something that is not an image: an ordinary paragraph
+			}
+			imageList.add(image);
 		}
-		if(child instanceof Image) {
-			return (Image) child;
+		return imageList.isEmpty() ? null : imageList;
+	}
+
+	/** The image a node is, or the one a link wraps; null when it is neither. */
+	@Nullable
+	private static Image imageOf(@NonNull Node node) {
+		if(node instanceof Image) {
+			return (Image) node;
 		}
-		if(child instanceof Link) {
-			Node inner = child.getFirstChild();
+		if(node instanceof Link) {
+			Node inner = node.getFirstChild();
 			if(inner instanceof Image && null == inner.getNext()) {
 				return (Image) inner;
 			}
 		}
 		return null;
+	}
+
+	/** The children of a node, as a list, so they can be relinked while iterating. */
+	@NonNull
+	private static List<Node> childrenOf(@NonNull Node parent) {
+		List<Node> list = new ArrayList<>();
+		for(Node child = parent.getFirstChild(); null != child; child = child.getNext()) {
+			list.add(child);
+		}
+		return list;
 	}
 }
