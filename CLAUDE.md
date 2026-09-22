@@ -106,6 +106,14 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
     shared between the check and the render phase so each distinct diagram is
     generated only once.
 - `Util.java` — file IO helpers (copy, empty-dir, string IO).
+- `vscode-sigeto/` — a small VS Code extension (plain JavaScript, no
+  dependencies, no build) that teaches the VS Code Markdown preview the
+  `~subscript~` / `^superscript^` syntax through `extendMarkdownIt`, so writing
+  a page shows what the site will show. It is a second implementation of the
+  same syntax, so the two have to be kept in step: `subsup.js` uses
+  markdown-it's `scanDelims()` because that is markdown-it's implementation of
+  the flanking rules commonmark-java applies to a delimiter processor. Verify a
+  change to either side by rendering the same lines through both and diffing.
 - `install-hooks.sh` + `githooks/sigeto-check.sh` — installs and implements the
   `pre-commit` / `pre-push` hooks for a *site* repository (not this one), which
   generate the site and refuse the commit when it does not build or when the

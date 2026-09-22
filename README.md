@@ -308,6 +308,9 @@ opening marker must be followed by something other than punctuation unless it
 is itself preceded by whitespace: `x^*i*^` does not work, `x^i^` and `at 23044
 ~(oct)~` do.
 
+The VS Code Markdown preview knows neither of these out of the box; the
+`vscode-sigeto/` extension in this repository teaches it both, see its README.
+
 ### Figures and captions
 
 An image that stands alone in its paragraph is rendered as a `<figure>` rather
