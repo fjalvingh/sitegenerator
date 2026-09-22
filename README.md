@@ -283,7 +283,30 @@ GitHub-style `:shortcode:` emoji are supported, backed by
 
 Standard GitHub-flavored-Markdown tables (`MyTablesExtension`) and
 `~~strikethrough~~` are supported, along with automatically generated heading
-anchors.
+anchors. Strikethrough needs *two* tildes here; a single one is a subscript.
+
+### Subscript and superscript
+
+Text between single `~` becomes a `<sub>`, text between single `^` a `<sup>`:
+
+```
+H~2~O holds 2^16^ of them, and 170005~oct~ is the checksum.
+```
+
+```html
+<p>H<sub>2</sub>O holds 2<sup>16</sup> of them, and 170005<sub>oct</sub> is the checksum.</p>
+```
+
+The text between the markers may not contain whitespace. A `~` or a `^` is far
+more often just a tilde or a caret in running text ("install it under ~/opt",
+"stop it with ^C") than it is a delimiter, and requiring that the two markers
+sit around a single word is what keeps those from silently turning into a
+subscript. `~two words~` stays exactly as written, markers and all.
+
+The same commonmark flanking rules that govern `*emphasis*` apply, so an
+opening marker must be followed by something other than punctuation unless it
+is itself preceded by whitespace: `x^*i*^` does not work, `x^i^` and `at 23044
+~(oct)~` do.
 
 ### Figures and captions
 

@@ -31,6 +31,7 @@ import to.etc.sigeto.plantuml.PlantumlBlock;
 import to.etc.sigeto.plantuml.PlantumlExtension;
 import to.etc.sigeto.plantuml.PlantumlImage;
 import to.etc.sigeto.plantuml.PlantumlRenderCache;
+import to.etc.sigeto.subsup.SubSupExtension;
 import to.etc.sigeto.tables.MyTablesExtension;
 import to.etc.sigeto.tocextension.TocExtension;
 import to.etc.sigeto.utils.Pair;
@@ -89,7 +90,9 @@ public class MarkdownChecker {
 
 	private final Yaml m_yaml = new Yaml();
 
-	private TextContentRenderer m_textRenderer = new TextContentRenderer.Builder().build();
+	private TextContentRenderer m_textRenderer = new TextContentRenderer.Builder()
+		.extensions(List.of(SubSupExtension.create()))
+		.build();
 
 	/** The ${demo} base url that "!demo(path)" tags resolve against, null when the site defined none. */
 	@Nullable
@@ -125,15 +128,10 @@ public class MarkdownChecker {
 		m_moveMap = moveMap;
 		m_includeBase = includeBase;
 		m_variables = variables;
-		//options.set(Parser.EXTENSIONS, Arrays.asList(
-		//	TypographicExtension.create(),
-		//	SuperscriptExtension.create(),
-		//	//SubscriptExtension.create()
-		//));
-
 		m_extList = List.of(
 			MyTablesExtension.create(),
-			StrikethroughExtension.create(),
+			StrikethroughExtension.builder().requireTwoTildes(true).build(),		// "~x~" is a subscript, see SubSupExtension
+			SubSupExtension.create(),
 			TocExtension.create(),
 			HeadingAnchorExtension.create(),
 			NotificationsExtension.create(),

@@ -79,6 +79,13 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   - `emojis/` — `:shortcode:` emoji, data-driven from
     `src/main/resources/emoji/emoji.csv`.
   - `tables/` — GFM table rendering.
+  - `subsup/` — `~subscript~` and `^superscript^`. Its subscript half shares
+    the `~` delimiter with strikethrough, so `StrikethroughExtension` is
+    registered with `requireTwoTildes(true)`: commonmark refuses two delimiter
+    processors claiming the same character with the same minimum length, and
+    staggers them by length once they differ. The content may not hold
+    whitespace, which is what keeps prose like "under ~/opt ... ~/opt" from
+    turning into a subscript.
   - `figures/` — a paragraph holding nothing but images becomes one captioned
     `<figure>`, the caption being the images' alt texts joined. Like
     `plantuml/` this hooks in through a `PostProcessor`: whether a paragraph
