@@ -133,6 +133,7 @@ public class Main {
 
 			//-- Links into a place inside a page can only be checked once every page has been scanned
 			mc.checkAnchors(errorList);
+			content.checkTags(errorList);
 
 			//-- Repair the links to moved documents in the sources themselves
 			List<LinkFix> linkFixList = mc.getLinkFixList();
@@ -170,6 +171,9 @@ public class Main {
 						renderGlobalBlogMirror(outputRoot, templateEngine, mc, blog, content);
 					}
 				}
+
+				//-- The page listing all tags
+				renderTagPage(outputRoot, templateEngine, content);
 
 				//-- Copy theme data
 				copyTemplateAssets(outputRoot, templateRoot);
@@ -305,7 +309,7 @@ public class Main {
 				: BlogNav.local(level, outputDir);
 		}
 
-		writePage(outputRoot, templateEngine, mc, content, item, render, newPath, nav);
+		writePage(outputRoot, templateEngine, content, item, render, outputDir, newPath, nav);
 	}
 
 	/**
@@ -322,10 +326,21 @@ public class Main {
 		String newPath = "blog-timeline/" + item.getRelativeTargetPath();
 
 		BlogNav nav = BlogNav.global(content, blog, outputDir);
-		writePage(outputRoot, templateEngine, mc, content, item, render, newPath, nav);
+		writePage(outputRoot, templateEngine, content, item, render, outputDir, newPath, nav);
 	}
 
-	private static void writePage(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, Content content, ContentItem item, String render, String newPath, BlogNav nav) throws Exception {
+	/**
+	 * Render the generated page listing all tags, when the site has any.
+	 */
+	private static void renderTagPage(File outputRoot, TemplateEngine templateEngine, Content content) throws Exception {
+		ContentItem tagPage = content.getTagPage();
+		if(null == tagPage)
+			return;
+		String render = TagPage.render(content.getTagList());
+		writePage(outputRoot, templateEngine, content, tagPage, render, tagPage.getDirectoryPath(), tagPage.getRelativeTargetPath(), BlogNav.NONE);
+	}
+
+	private static void writePage(File outputRoot, TemplateEngine templateEngine, Content content, ContentItem item, String render, String outputDir, String newPath, BlogNav nav) throws Exception {
 		File out = new File(outputRoot, newPath);
 		File parentFile = out.getParentFile();
 		if(null != parentFile) {
@@ -333,7 +348,7 @@ public class Main {
 		}
 
 		TemplateOutput output = new StringOutput(65536);
-		PageModel pm = new PageModel(content, render, mc, item, nav.previousHref, nav.previousTitle, nav.nextHref, nav.nextTitle);
+		PageModel pm = new PageModel(content, render, outputDir, item, nav.previousHref, nav.previousTitle, nav.nextHref, nav.nextTitle);
 		templateEngine.render("base.jte", pm, output);
 
 		Util.writeFileFromString(out, output.toString(), StandardCharsets.UTF_8);

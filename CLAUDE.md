@@ -53,8 +53,16 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   the json, and the templates decide which one they use. See the "The site
   menu" section of `README.md`.
 - `PageModel.java` — the object handed to `base.jte`; exposes rendered HTML,
-  breadcrumbs, menu, and `siteURL()` for computing relative links from any
-  page depth.
+  breadcrumbs, menu, tags, and `siteURL()` for computing relative links from
+  the page's output directory, whatever its depth.
+- `ContentTag.java` / `TagPage.java` — tags. `MarkdownChecker` registers the
+  front matter `tags:` of every page on both the page and the (case
+  insensitive) `ContentTag`; `Content.checkTags()` warns about tags written in
+  more than one way. `Content.complete()` sorts the tags, gives them their
+  anchors and creates the tag page, before the menu is built: the tag page is a
+  `ContentFileType.Generated` `ContentItem` (no source file, not in the item
+  map) that `Menu` appends to the top level, and that `Main` renders through
+  `base.jte` with `TagPage.render()` as its content.
 - `LinkUpdater.java` — rewrites `.md` links in the AST to point at the
   generated `.html` targets.
 - `MoveMap.java` / `GitMoveScanner.java` / `LinkFix.java` /

@@ -95,8 +95,9 @@ menulocation: 10.5
 ...
 ```
 
-A `tags: foo, bar` (or YAML list) entry in the front matter tags the page,
-and `menu: { hidden: true }` excludes a page from the generated site menu.
+A `tags: foo, bar` (or YAML list) entry in the front matter tags the page
+(see "Tags" below), and `menu: { hidden: true }` excludes a page from the
+generated site menu.
 
 ### Page titles
 
@@ -670,6 +671,61 @@ a template can keep both and switch between them with a single flag. Note that
 browsers do not allow
 `fetch()` on `file://` urls, so this variant has to be tested through a web
 server (`python3 -m http.server` in the output directory will do).
+
+## Tags
+
+A page is tagged in its front matter, either as a comma separated list or as a
+YAML list:
+
+```
+---
+tags: database, security
+---
+```
+
+Tags are case insensitive: `API` and `api` are the same tag. It is shown with
+the spelling most of its pages use, and the build warns about such a tag,
+naming the pages that spell it differently, so that can be fixed in the source.
+
+When at least one page has a tag, the generator writes a **tag page** to
+`tags.html` at the site root, and adds it as the **last item of the top level
+of the menu**, whatever the order of the other items there (and in `menu.json`
+too). Nothing in `content/` may be published at `tags.html` itself; the build
+stops when something is. The page is rendered through `base.jte` like any other
+page, with this content:
+
+```html
+<h1>Tags</h1>
+<div class="ui-tag-cloud">
+<a class="ui-tag ui-tag-w3" href="#tag-database" title="3 pages">database</a>
+...
+</div>
+<h2 class="ui-tag-title" id="tag-database">database</h2>
+<ul class="ui-tag-pages">
+<li><a href="...">Page title</a></li>
+...
+</ul>
+...
+```
+
+The cloud lists all tags alphabetically, each linking to its own section below
+it, which lists the pages having that tag by title. `ui-tag-w1` to
+`ui-tag-w5` say how much a tag is used, from the least used tag of the site to
+the most used one, on a logarithmic scale so that a tag used everywhere does
+not reduce all others to the same smallest size. How that looks is up to the
+site's css.
+
+Templates get the tags through the `PageModel`:
+
+- `model.getTagList()` - the tags of the page being rendered, in the order its
+  front matter lists them; `tag.getName()` is the name to show.
+- `model.tagHref(tag)` - the link to that tag's section on the tag page.
+- `model.getTagPageHref()` - the link to the tag page, null when the site has
+  no tags.
+- `model.isGenerated()` - T for a page the generator made itself, like the tag
+  page, rather than one written in `content/`. A template can use it to keep
+  such a page out of a search index, as it only repeats what the real pages
+  say.
 
 ## Templates
 

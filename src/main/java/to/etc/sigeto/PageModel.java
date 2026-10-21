@@ -13,7 +13,8 @@ public class PageModel {
 
 	private final String m_content;
 
-	private final MarkdownChecker m_markdown;
+	/** The directory the page is written to, relative to the site root; all links on the page are relative to it. */
+	private final String m_outputDir;
 
 	private final ContentItem m_item;
 
@@ -35,15 +36,15 @@ public class PageModel {
 
 	private boolean m_currentMenuItemResolved;
 
-	public PageModel(Content siteContent, String content, MarkdownChecker markdown, ContentItem item) {
-		this(siteContent, content, markdown, item, null, null, null, null);
+	public PageModel(Content siteContent, String content, String outputDir, ContentItem item) {
+		this(siteContent, content, outputDir, item, null, null, null, null);
 	}
 
-	public PageModel(Content siteContent, String content, MarkdownChecker markdown, ContentItem item,
+	public PageModel(Content siteContent, String content, String outputDir, ContentItem item,
 		@Nullable String previousHref, @Nullable String previousTitle, @Nullable String nextHref, @Nullable String nextTitle) {
 		m_siteContent = siteContent;
 		m_content = content;
-		m_markdown = markdown;
+		m_outputDir = outputDir;
 		m_item = item;
 		m_previousHref = previousHref;
 		m_previousTitle = previousTitle;
@@ -79,6 +80,14 @@ public class PageModel {
 		return m_item;
 	}
 
+	/**
+	 * T for a page the generator made itself, like the tag page, rather than
+	 * one written in the content.
+	 */
+	public boolean isGenerated() {
+		return m_item.getFileType() == ContentFileType.Generated;
+	}
+
 	public String getTitle() {
 		return m_item.getPageTitle() == null ? "Content page" : m_item.getPageTitle();
 	}
@@ -99,8 +108,35 @@ public class PageModel {
 		return getMenu().getRoot();
 	}
 
+	/**
+	 * Create a URL relative to the root, using ../.. paths, correct for the
+	 * output directory of this page.
+	 */
 	public String siteURL(String url) {
-		return m_markdown.siteURL(url);
+		return Util.relativeHref(m_outputDir, url);
+	}
+
+	/**
+	 * The tags of this page, in the order its front matter lists them.
+	 */
+	public List<ContentTag> getTagList() {
+		return m_item.getTagList();
+	}
+
+	/**
+	 * The link to the tag's section on the tag page.
+	 */
+	public String tagHref(ContentTag tag) {
+		return siteURL(TagPage.FILE_NAME + "#" + tag.getAnchor());
+	}
+
+	/**
+	 * The link to the tag page, or null when the site has no tags.
+	 */
+	@Nullable
+	public String getTagPageHref() {
+		ContentItem tagPage = m_siteContent.getTagPage();
+		return null == tagPage ? null : siteURL(tagPage.getRelativeTargetPath());
 	}
 
 	/**

@@ -125,6 +125,18 @@ public class Util {
 		return map;
 	}
 
+	/**
+	 * Text made safe to put into html, as content or as a quoted attribute value.
+	 */
+	@NonNull
+	public static String escapeHtml(@NonNull String in) {
+		return in
+			.replace("&", "&amp;")
+			.replace("<", "&lt;")
+			.replace(">", "&gt;")
+			.replace("\"", "&quot;");
+	}
+
 	public static String getExtension(String name) {
 		int pos = name.lastIndexOf('/');
 		if(pos != -1) {

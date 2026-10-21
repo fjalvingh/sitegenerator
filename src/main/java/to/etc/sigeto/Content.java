@@ -36,6 +36,13 @@ public class Content {
 
 	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
 
+	/** All tags, sorted by name; filled by {@link #complete()}. */
+	private List<ContentTag> m_tagList = new ArrayList<>();
+
+	/** The generated tag page, made by {@link #complete()} when any page has tags. */
+	@Nullable
+	private ContentItem m_tagPage;
+
 	/** All blog entries in the whole content tree, sorted ascending by blog date - the sitewide global timeline. */
 	private List<ContentLevel> m_allBlogEntries = new ArrayList<>();
 
@@ -54,6 +61,13 @@ public class Content {
 	}
 
 	public void complete() {
+		//-- Tags, and the page listing them, which the menu needs to know about
+		List<ContentTag> tagList = new ArrayList<>(m_tagMap.values());
+		tagList.sort(ContentTag.BY_NAME);
+		TagPage.assignAnchors(tagList);
+		m_tagList = tagList;
+		m_tagPage = tagList.isEmpty() ? null : TagPage.createItem(this, tagList);
+
 		//-- Create the site menu
 		m_menu = Menu.create(this);
 
@@ -253,6 +267,54 @@ public class Content {
 
 	public ContentTag getTag(String tagName) {
 		return m_tagMap.computeIfAbsent(tagName.toLowerCase(), a -> new ContentTag(a));
+	}
+
+	/**
+	 * Tags are case insensitive, so a tag written in different ways by different
+	 * pages is still one tag - but it can only be shown one way, which is
+	 * probably not what all of those pages meant. Warn once per tag, naming the
+	 * pages that use a spelling other than the one shown.
+	 */
+	public void checkTags(@NonNull List<Message> errorList) {
+		List<ContentTag> tagList = new ArrayList<>(m_tagMap.values());
+		tagList.sort(ContentTag.BY_NAME);
+		for(ContentTag tag : tagList) {
+			Map<String, List<ContentItem>> spellingMap = tag.getSpellingMap();
+			if(spellingMap.size() < 2)
+				continue;
+			String name = tag.getName();
+			StringBuilder sb = new StringBuilder();
+			sb.append("tag '").append(name).append("' is also written as");
+			for(Map.Entry<String, List<ContentItem>> entry : spellingMap.entrySet()) {
+				if(entry.getKey().equals(name))
+					continue;
+				List<String> pathList = new ArrayList<>();
+				for(ContentItem item : entry.getValue()) {
+					pathList.add(item.getRelativePath());
+				}
+				Collections.sort(pathList);
+				sb.append(" '").append(entry.getKey()).append("' in ").append(String.join(", ", pathList)).append(";");
+			}
+			sb.append(" the tag page shows it as '").append(name).append("' everywhere");
+			errorList.add(new Message(null, 0, MsgType.Warning, sb.toString()));
+		}
+	}
+
+	/**
+	 * All tags used in the site, sorted by name. Known after {@link #complete()}.
+	 */
+	@NonNull
+	public List<ContentTag> getTagList() {
+		return m_tagList;
+	}
+
+	/**
+	 * The generated page listing all tags, or null when no page has tags.
+	 * Known after {@link #complete()}.
+	 */
+	@Nullable
+	public ContentItem getTagPage() {
+		return m_tagPage;
 	}
 
 	public List<ContentItem> getItemList() {

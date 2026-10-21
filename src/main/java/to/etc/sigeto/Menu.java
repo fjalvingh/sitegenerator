@@ -52,7 +52,22 @@ public class Menu {
 
 		Menu menu = new Menu(rootItem);
 		menu.generateMenuLevel(rootItem, index == null ? rootLevel : index);
+		menu.appendTagPage(rootItem, content.getTagPage());
 		return menu;
+	}
+
+	/**
+	 * The generated tag page is not part of the content tree, and always goes
+	 * last in the top level, whatever the order of the pages there.
+	 */
+	private void appendTagPage(MenuItem rootItem, @Nullable ContentItem tagPage) {
+		if(null == tagPage)
+			return;
+		MenuItem mi = new MenuItem(rootItem, tagPage.getLevel(), tagPage, TagPage.TITLE, null, rootItem.getItemLevel() + 1);
+		List<MenuItem> subItemList = rootItem.getSubItemList();
+		mi.setMenuIndex(subItemList.size());
+		subItemList.add(mi);
+		m_itemMap.put(tagPage, mi);
 	}
 
 	private void generateMenuLevel(MenuItem rootItem, ContentLevel level) {

@@ -70,9 +70,6 @@ public class MarkdownChecker {
 
 	private ContentItem m_currentItem;
 
-	/** Output-relative directory the page currently being rendered will be written to. */
-	private String m_outputDir;
-
 	private List<Message> m_errorList;
 
 	/**
@@ -168,7 +165,6 @@ public class MarkdownChecker {
 		if(item.getFileType() != ContentFileType.Markdown)
 			throw new IllegalStateException(item + " is not markdown");
 		m_currentItem = item;
-		m_outputDir = outputDir;
 		Pair<Node, String> result = parse(item.getFile());
 		Node doc = result.getFirst();
 
@@ -231,6 +227,11 @@ public class MarkdownChecker {
 		}
 	}
 
+	/**
+	 * Tag the page with every tag in a comma separated list. Tags are case
+	 * insensitive, so a tag written differently elsewhere is the same tag; see
+	 * {@link Content#checkTags(List)}.
+	 */
 	private void appendTagString(ContentItem item, String text) {
 		if(text.isBlank())
 			return;
@@ -238,7 +239,9 @@ public class MarkdownChecker {
 			s = s.trim();
 			if(!s.isBlank()) {
 				ContentTag tag = m_content.getTag(s);
-				tag.addItem(item);
+				if(item.addTag(tag)) {
+					tag.addItem(item, s);
+				}
 			}
 		}
 	}
@@ -662,14 +665,6 @@ public class MarkdownChecker {
 	@NonNull
 	public List<LinkFix> getLinkFixList() {
 		return m_linkFixList;
-	}
-
-	/**
-	 * Create a URL relative to the root, using ../.. paths, correct for the
-	 * output directory of the page currently being rendered.
-	 */
-	public String siteURL(String url) {
-		return Util.relativeHref(m_outputDir, url);
 	}
 
 	static void walkNode(Node node, Consumer<Node> nodeConsumer) {

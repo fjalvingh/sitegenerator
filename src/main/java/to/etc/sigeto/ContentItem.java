@@ -6,12 +6,16 @@ import org.eclipse.jdt.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class ContentItem {
+	/** The source file; null for a {@link ContentFileType#Generated} page, which has none. */
+	@Nullable
 	private final File m_file;
 
 	private String m_name;
@@ -34,7 +38,8 @@ public class ContentItem {
 
 	private final Map<String, Object> m_frontMatter = new HashMap<>();
 
-	private final Map<String, ContentTag> m_tagMap = new HashMap<>();
+	/** The tags of this page, in the order its front matter lists them. */
+	private final List<ContentTag> m_tagList = new ArrayList<>();
 
 	@Nullable
 	private LocalDate m_createdDate;
@@ -43,10 +48,27 @@ public class ContentItem {
 	private LocalDate m_modifiedDate;
 
 	public ContentItem(@NonNull Content content, @NonNull ContentLevel level, File file, ContentType type, ContentFileType fileType, String relativePath) {
+		this(content, level, file, file.getName(), type, fileType);
+	}
+
+	/**
+	 * A page the generator makes itself, at the given level, which has no
+	 * source file and so takes its title and dates from the caller.
+	 */
+	@NonNull
+	static ContentItem generated(@NonNull Content content, @NonNull ContentLevel level, @NonNull String name, @NonNull String title, @NonNull LocalDate created, @NonNull LocalDate modified) {
+		ContentItem item = new ContentItem(content, level, null, name, ContentType.Page, ContentFileType.Generated);
+		item.m_pageTitle = title;
+		item.m_createdDate = created;
+		item.m_modifiedDate = modified;
+		return item;
+	}
+
+	private ContentItem(@NonNull Content content, @NonNull ContentLevel level, @Nullable File file, @NonNull String name, ContentType type, ContentFileType fileType) {
 		m_content = content;
 		m_level = level;
 		m_file = file;
-		m_name = file.getName();
+		m_name = name;
 		m_type = type;
 		m_fileType = fileType;
 	}
@@ -77,8 +99,12 @@ public class ContentItem {
 		m_level = level;
 	}
 
+	@NonNull
 	public File getFile() {
-		return m_file;
+		File file = m_file;
+		if(null == file)
+			throw new IllegalStateException(this + " is generated, it has no source file");
+		return file;
 	}
 
 	public ContentType getType() {
@@ -235,5 +261,23 @@ public class ContentItem {
 
 	public Map<String, Object> getFrontMatter() {
 		return m_frontMatter;
+	}
+
+	/**
+	 * Give this page a tag; returns false when it already had it.
+	 */
+	boolean addTag(@NonNull ContentTag tag) {
+		if(m_tagList.contains(tag))
+			return false;
+		m_tagList.add(tag);
+		return true;
+	}
+
+	/**
+	 * The tags of this page, in the order its front matter lists them.
+	 */
+	@NonNull
+	public List<ContentTag> getTagList() {
+		return m_tagList;
 	}
 }

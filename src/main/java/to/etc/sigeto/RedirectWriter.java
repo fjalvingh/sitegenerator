@@ -88,7 +88,7 @@ final class RedirectWriter {
 
 	@NonNull
 	private static String defaultPage(@NonNull String href, @NonNull String title) {
-		String escapedHref = escape(href);
+		String escapedHref = Util.escapeHtml(href);
 		return "<!doctype html>\n"
 			+ "<html lang=\"en\">\n"
 			+ "<head>\n"
@@ -99,7 +99,7 @@ final class RedirectWriter {
 			+ "<meta name=\"robots\" content=\"noindex\">\n"
 			+ "</head>\n"
 			+ "<body>\n"
-			+ "<p>This page has moved to <a href=\"" + escapedHref + "\">" + escape(title) + "</a>.</p>\n"
+			+ "<p>This page has moved to <a href=\"" + escapedHref + "\">" + Util.escapeHtml(title) + "</a>.</p>\n"
 			+ "</body>\n"
 			+ "</html>\n";
 	}
@@ -134,14 +134,5 @@ final class RedirectWriter {
 				return false;
 		}
 		return true;
-	}
-
-	@NonNull
-	private static String escape(@NonNull String in) {
-		return in
-			.replace("&", "&amp;")
-			.replace("<", "&lt;")
-			.replace(">", "&gt;")
-			.replace("\"", "&quot;");
 	}
 }
