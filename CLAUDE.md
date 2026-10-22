@@ -105,7 +105,9 @@ java -jar target/sitegen-jar-with-dependencies.jar -i testsite -o testsite/_outp
   - `variables/` — `${name}` variables. `VariableFile` loads the site's own
     definitions from `<siteRoot>/variables.properties`; `-Dname=value` on the
     command line overrides them, and `Main` picks `demo` out of the result as
-    the base url the `!demo()` tags resolve against.
+    the base url the `!demo()` tags resolve against. The templates get the
+    same values through `PageModel.variable(name)`, which returns null for an
+    undefined name instead of failing the build.
   - `plantuml/` — ` ```plantuml ` fenced blocks, rendered to an svg/png file
     next to the page by the bundled PlantUML. This one hooks in through a
     `PostProcessor` rather than a block parser (commonmark already knows how to

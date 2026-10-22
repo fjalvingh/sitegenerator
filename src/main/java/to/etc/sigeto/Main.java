@@ -162,18 +162,18 @@ public class Main {
 				TemplateEngine templateEngine = TemplateEngine.create(codeResolver, jteClassPath, gg.jte.ContentType.Html);
 				Util.dirEmpty(outputRoot);
 				for(ContentItem item : content.getItemList()) {
-					renderItem(outputRoot, templateEngine, mc, item, content);
+					renderItem(outputRoot, templateEngine, mc, item, content, variableMap);
 				}
 
 				//-- Render the sitewide global timeline copy of every story-nested blog entry
 				for(ContentLevel blog : content.getAllBlogEntries()) {
 					if(!blog.isGlobalBlogRoot()) {
-						renderGlobalBlogMirror(outputRoot, templateEngine, mc, blog, content);
+						renderGlobalBlogMirror(outputRoot, templateEngine, mc, blog, content, variableMap);
 					}
 				}
 
 				//-- The page listing all tags
-				renderTagPage(outputRoot, templateEngine, content);
+				renderTagPage(outputRoot, templateEngine, content, variableMap);
 
 				//-- Copy theme data
 				copyTemplateAssets(outputRoot, templateRoot);
@@ -213,9 +213,9 @@ public class Main {
 		}
 	}
 
-	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
+	private void renderItem(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content, Map<String, String> variableMap) throws Exception {
 		if(item.getFileType() == ContentFileType.Markdown) {
-			renderMarkdown(outputRoot, templateEngine, mc, item, content);
+			renderMarkdown(outputRoot, templateEngine, mc, item, content, variableMap);
 		} else {
 			String relativePath = item.getRelativePath();
 			File out = new File(outputRoot, relativePath);
@@ -296,7 +296,7 @@ public class Main {
 		return list.toArray(new String[list.size()]);
 	}
 
-	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content) throws Exception {
+	private static void renderMarkdown(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentItem item, Content content, Map<String, String> variableMap) throws Exception {
 		String outputDir = item.getDirectoryPath();
 		String render = mc.renderContent(item, outputDir);
 		String newPath = item.getRelativeTargetPath();
@@ -309,7 +309,7 @@ public class Main {
 				: BlogNav.local(level, outputDir);
 		}
 
-		writePage(outputRoot, templateEngine, content, item, render, outputDir, newPath, nav);
+		writePage(outputRoot, templateEngine, content, variableMap, item, render, outputDir, newPath, nav);
 	}
 
 	/**
@@ -317,7 +317,7 @@ public class Main {
 	 * blog timeline namespace, with prev/next navigating the whole site's
 	 * chronological blog list rather than just this entry's story.
 	 */
-	private static void renderGlobalBlogMirror(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentLevel blog, Content content) throws Exception {
+	private static void renderGlobalBlogMirror(File outputRoot, TemplateEngine templateEngine, MarkdownChecker mc, ContentLevel blog, Content content, Map<String, String> variableMap) throws Exception {
 		ContentItem item = blog.getRootItem();
 		if(null == item)
 			return;
@@ -326,21 +326,21 @@ public class Main {
 		String newPath = "blog-timeline/" + item.getRelativeTargetPath();
 
 		BlogNav nav = BlogNav.global(content, blog, outputDir);
-		writePage(outputRoot, templateEngine, content, item, render, outputDir, newPath, nav);
+		writePage(outputRoot, templateEngine, content, variableMap, item, render, outputDir, newPath, nav);
 	}
 
 	/**
 	 * Render the generated page listing all tags, when the site has any.
 	 */
-	private static void renderTagPage(File outputRoot, TemplateEngine templateEngine, Content content) throws Exception {
+	private static void renderTagPage(File outputRoot, TemplateEngine templateEngine, Content content, Map<String, String> variableMap) throws Exception {
 		ContentItem tagPage = content.getTagPage();
 		if(null == tagPage)
 			return;
 		String render = TagPage.render(content.getTagList());
-		writePage(outputRoot, templateEngine, content, tagPage, render, tagPage.getDirectoryPath(), tagPage.getRelativeTargetPath(), BlogNav.NONE);
+		writePage(outputRoot, templateEngine, content, variableMap, tagPage, render, tagPage.getDirectoryPath(), tagPage.getRelativeTargetPath(), BlogNav.NONE);
 	}
 
-	private static void writePage(File outputRoot, TemplateEngine templateEngine, Content content, ContentItem item, String render, String outputDir, String newPath, BlogNav nav) throws Exception {
+	private static void writePage(File outputRoot, TemplateEngine templateEngine, Content content, Map<String, String> variableMap, ContentItem item, String render, String outputDir, String newPath, BlogNav nav) throws Exception {
 		File out = new File(outputRoot, newPath);
 		File parentFile = out.getParentFile();
 		if(null != parentFile) {
@@ -348,7 +348,7 @@ public class Main {
 		}
 
 		TemplateOutput output = new StringOutput(65536);
-		PageModel pm = new PageModel(content, render, outputDir, item, nav.previousHref, nav.previousTitle, nav.nextHref, nav.nextTitle);
+		PageModel pm = new PageModel(content, variableMap, render, outputDir, item, nav.previousHref, nav.previousTitle, nav.nextHref, nav.nextTitle);
 		templateEngine.render("base.jte", pm, output);
 
 		Util.writeFileFromString(out, output.toString(), StandardCharsets.UTF_8);

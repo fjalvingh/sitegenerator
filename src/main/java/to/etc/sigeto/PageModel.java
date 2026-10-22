@@ -5,11 +5,15 @@ import org.eclipse.jdt.annotation.Nullable;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class PageModel {
 	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
 	private final Content m_siteContent;
+
+	/** What the site's variables stand for in this build, see {@link #variable(String)}. */
+	private final Map<String, String> m_variableMap;
 
 	private final String m_content;
 
@@ -36,13 +40,14 @@ public class PageModel {
 
 	private boolean m_currentMenuItemResolved;
 
-	public PageModel(Content siteContent, String content, String outputDir, ContentItem item) {
-		this(siteContent, content, outputDir, item, null, null, null, null);
+	public PageModel(Content siteContent, Map<String, String> variableMap, String content, String outputDir, ContentItem item) {
+		this(siteContent, variableMap, content, outputDir, item, null, null, null, null);
 	}
 
-	public PageModel(Content siteContent, String content, String outputDir, ContentItem item,
+	public PageModel(Content siteContent, Map<String, String> variableMap, String content, String outputDir, ContentItem item,
 		@Nullable String previousHref, @Nullable String previousTitle, @Nullable String nextHref, @Nullable String nextTitle) {
 		m_siteContent = siteContent;
+		m_variableMap = variableMap;
 		m_content = content;
 		m_outputDir = outputDir;
 		m_item = item;
@@ -70,6 +75,17 @@ public class PageModel {
 	@Nullable
 	public String getNextTitle() {
 		return m_nextTitle;
+	}
+
+	/**
+	 * The value of a site variable, for the templates; null when the build does
+	 * not define it. Unlike a ${name} in a page, which must be defined, a
+	 * template can use a variable that only some builds set, and leave out
+	 * what shows it when it is not there.
+	 */
+	@Nullable
+	public String variable(String name) {
+		return m_variableMap.get(name);
 	}
 
 	public String getContent() {

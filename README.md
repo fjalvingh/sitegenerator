@@ -134,6 +134,17 @@ build - that is how the same site is built against another installation of the
 application it documents. There is no other source of values: variables are a
 build parameter, not page metadata.
 
+The page templates can use variables as well, through `model.variable("name")`.
+That returns null for a name the build does not define, so a template can show
+something only when a build sets it - for instance a `-Dbranch=preprd` that
+only the builds publishing one site per branch pass:
+
+```
+!{String branch = model.variable("branch");}
+...
+@if(branch != null)<span class="ui-site-branch">${branch}</span>@endif
+```
+
 One name has a meaning to the generator itself: `demo` is the base url the
 `!demo()` tags resolve against, see "Embedded application pages" below. It has
 to be an `http://` or `https://` url.
